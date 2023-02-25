@@ -41,6 +41,13 @@ public class RoomSpawner : MonoBehaviour
     /// <param name="roomPos_z">the world position tilePos_z for the ship</param>
     public void BuildRoom(GameObject parentShipObject, RoomInfo room, float roomPos_x, float roomPos_z)
     {
+        // create an empty room object in the hiearchy to store the room data in an organized way
+        GameObject roomObject = new GameObject(room.roomName);
+        roomObject.transform.position = new Vector3(roomPos_x, 0, roomPos_z);
+
+        // Sets the spawned gameObject to be a child of the empty gameObject
+        roomObject.transform.SetParent(parentShipObject.transform);
+
         // go through each row of this room
         for (int roomRow = 0; roomRow < room.roomTiles.GetLength(0); roomRow++)
         {
@@ -60,7 +67,7 @@ public class RoomSpawner : MonoBehaviour
                 {
                     // floor tiles can be normal floor or stars - floors use different textures
                     case RoomTiles.Floor:
-                        GameObject floorTile = InstantiateTile(parentShipObject, room.roomType, floorPrefab, currentTilePos_x, currentTilePos_z);
+                        GameObject floorTile = InstantiateTile(roomObject, room.roomType, floorPrefab, currentTilePos_x, currentTilePos_z);
 
                         // get the child object (the geometry) and set the texture for this tile
                         Renderer floorTileRenderer = floorTile.GetComponentInChildren<Renderer>();
@@ -70,7 +77,7 @@ public class RoomSpawner : MonoBehaviour
                     // floor tiles can be normal floor or stars - stars use different textures
                     case RoomTiles.Star:
                         // Instantiated both the tile and the star but the star on y value higher
-                        GameObject starTile = InstantiateTile(parentShipObject, room.roomType, floorPrefab, currentTilePos_x, currentTilePos_z);
+                        GameObject starTile = InstantiateTile(roomObject, room.roomType, floorPrefab, currentTilePos_x, currentTilePos_z);
 
                         // get the child object (the geometry) and set the texture for this tile
                         Renderer starTileRenderer = starTile.GetComponentInChildren<Renderer>();
@@ -79,7 +86,7 @@ public class RoomSpawner : MonoBehaviour
 
                     // floor tiles can be normal floor or stars
                     case RoomTiles.Area:
-                        InstantiateTile(parentShipObject, room.roomType, tileObjects[0], currentTilePos_x, currentTilePos_z);
+                        InstantiateTile(roomObject, room.roomType, tileObjects[0], currentTilePos_x, currentTilePos_z);
                         break;
 
                     // floor tiles can be normal floor or stars
@@ -104,7 +111,7 @@ public class RoomSpawner : MonoBehaviour
                             wallOrientation = WallOrientation.East;
                         }
 
-                        InstantiateWall(parentShipObject, wallOrientation, currentTilePos_x, currentTilePos_z);
+                        InstantiateWall(roomObject, wallOrientation, currentTilePos_x, currentTilePos_z);
                         break;
 
                     // default is to do nothing (RoomTiles.Empty areas)

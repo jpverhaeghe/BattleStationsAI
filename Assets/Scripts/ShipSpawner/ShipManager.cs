@@ -1,15 +1,14 @@
 ﻿using System.Collections;
 using System.Collections.Generic;
+using TMPro;
 using UnityEngine;
 using static RoomData;
-using static UnityEngine.Rendering.DebugUI.Table;
 
 public class ShipManager : MonoBehaviour
 {
-    // NOTE: Size of ships is num modules divided by 3
-
+    // Constant values used by this script - these are some of the default ships for comparisson
     // Creates a layout for Redundant II (Hunan Scout) - Size 3 (9/3)
-    public static RoomInfo[,] HumanScout = {
+    private static RoomInfo[,] RedundantII = {
         {null,                  CannonUpInfo,           null},
         {null,                  MissileBayRightInfo,    null},
         {HelmUpInfo,            TeleporterUpInfo,       HyperdriveRightInfo},
@@ -18,7 +17,7 @@ public class ShipManager : MonoBehaviour
     };
 
     // Creates layout for Valiant (Human Frigate) - Size 4 (12/3)
-    public static RoomInfo[,] HumanFrigate = {
+    private static RoomInfo[,] Valiant = {
         {null,                  null,                   HelmUpInfo,             null,                   null},
         {null,                  null,                   LifeSupportInfo,        null,                   null},
         {null,                  ScienceLeftInfo,        TeleporterUpInfo,       MissileBayRightInfo,    null},
@@ -26,8 +25,8 @@ public class ShipManager : MonoBehaviour
         {CannonLeftInfo,        EngineUpInfo,           null,                   EngineUpInfo,           CannonRightInfo},
     };
 
-    // Creates the Fearlight - Size 3 (9/3)
-    public static RoomInfo[,] Fearlight = {
+    // Creates the Fearlight (Tentac Scout) - Size 3 (9/3)
+    private static RoomInfo[,] Fearlight = {
         {null,                  HelmUpInfo,             null},
         {ScienceDownInfo,       TeleporterUpInfo,       CannonUpInfo},
         {HyperdriveDownInfo,    null,                   MissileBayRightInfo},
@@ -35,7 +34,7 @@ public class ShipManager : MonoBehaviour
     };
 
     // Creates the Claw - Size 3 (9/3)
-    public static RoomInfo[,] TentacScout = {
+    private static RoomInfo[,] TentacScout = {
         {null,                  ScienceUpInfo,          null},
         {EngineRightInfo,       HyperdriveLeftInfo,     CannonUpInfo},
         {EngineRightInfo,       null,                   MissileBayRightInfo},
@@ -43,7 +42,7 @@ public class ShipManager : MonoBehaviour
     };
 
     // Create Xeloxian scout - Size 3 (9/3)
-    public static RoomInfo[,] XeloxianScout = {
+    private static RoomInfo[,] XeloxianScout = {
         {null,                  null,                   HelmUpInfo,             null,                   null},
         {null,                  null,                   LifeSupportInfo,        null,                   null},
         {CannonLeftInfo,        EngineUpInfo,           TeleporterUpInfo,       EngineUpInfo,           EngineUpInfo},
@@ -51,29 +50,29 @@ public class ShipManager : MonoBehaviour
         {null,                  null,                   ScienceUpInfo,          null,                   null},
     };
 
-    // creates silicoid scout - Size 3 (10/3)
-    public static RoomInfo[,] SilicoidScout = {
+    // Creates silicoid scout - Size 3 (10/3)
+    private static RoomInfo[,] SilicoidScout = {
         {null,                  LifeSupportInfo,        null,                   HyperdriveRightInfo,    null},
         {null,                  MissileBayLeftInfo,     HelmUpInfo,             ScienceUpInfo,          null},
         {CannonLeftInfo,        EngineUpInfo,           null,                   EngineUpInfo,           EngineUpInfo},
     };
 
     // Creates a canosian scout - Size 3 (9/3)
-    public static RoomInfo[,] CanosianScout = {
+    private static RoomInfo[,] CanosianScout = {
         {null,                  null,                   HelmUpInfo,             null,                   null},
         {null,                  MissileBayUpInfo,       LifeSupportInfo,        ScienceLeftInfo,        null},
         {CannonLeftInfo,        EngineUpInfo,           EngineUpInfo,           HyperdriveLeftInfo,     CargoBayInfo},
     };
 
     // Creates starbase layout - Size 3 (9/3)
-    public static RoomInfo[,] Starbase = {
+    private static RoomInfo[,] Starbase = {
         {CannonUpInfo,          CargoBayInfo,           MissileBayRightInfo},
         {LifeSupportInfo,       SickBayUpInfo,          ScienceUpInfo},
         {EngineUpInfo,          EngineUpInfo,           EngineUpInfo},
     };
 
     // Creates the starbas layout facing to the right (probably can remove) - Size 3 (9/3)
-    public static RoomInfo[,] StarbaseR = {
+    private static RoomInfo[,] StarbaseR = {
         {EngineRightInfo,       LifeSupportInfo,        CannonRightInfo},
         {EngineRightInfo,       SickBayDownInfo,        CargoBayInfo},
         {EngineRightInfo,       ScienceRightInfo,       MissileBayDownInfo},
@@ -82,12 +81,17 @@ public class ShipManager : MonoBehaviour
     //Is a list of the different ship options
     private List<RoomInfo[,]> shipList = new List<RoomInfo[,]>
     {
-        HumanScout, HumanFrigate, Fearlight, TentacScout, XeloxianScout, SilicoidScout, CanosianScout, Starbase, StarbaseR, 
+        RedundantII, Valiant, Fearlight, TentacScout, XeloxianScout, SilicoidScout, CanosianScout, Starbase, 
     };
-    
-    private RoomSpawner roomSpawner;                // A refrence to the class roomSpawner    
-    private List<GameObject> shipObjects;           // An empty gameObejct that stores all the spawned gameObjects to keep things clean and easy to find
-    private int currentShipID = 0;                  // The current ship id
+
+    // Serialized fields used by this script
+    [SerializeField] ShipLayoutGenerator shipLayoutGeneratorScript;     // a link to the ship layout generator to call when generate ship is pressed
+    [SerializeField] TMP_Dropdown prebuiltShipList;                     // a list of the prebuilt ships
+
+    // private variables used by this script
+    private RoomSpawner roomSpawner;                                    // A refrence to the class roomSpawner    
+    private List<GameObject> shipObjects;                               // An empty gameObejct that stores all the spawned gameObjects to keep things clean and easy to find
+    private int currentShipID = 0;                                      // The current ship id
 
     /// <summary>
     /// Initializes variables for this ship manager
@@ -102,50 +106,63 @@ public class ShipManager : MonoBehaviour
 
     } // end Start
 
+    /// <summary>
+    /// Generate a random ship at the origin of the scene
+    /// </summary>
+    public void GenerateShip()
+    {
+        // for now remove the old ship (if there is one) as this method should only be called from the generate ship buttons
+        ClearShip();
+
+        // for debug, sending this down so we can build the ship each room iteration
+        //RoomInfo[,] ship = shipLayoutGeneratorScript.GenerateShipLayout(this);
+        RoomInfo[,] ship = shipLayoutGeneratorScript.GenerateShipLayout();
+        CreateShip(ship, 0, 0);
+
+    } // end GenerateShip
 
     /// <summary>
-    /// Creates a ship at the origin of the scene
+    /// Creates a ship from the pre-built list at the origin of the scene
     /// </summary>
     public void CreateShip()
     {
-        // for now remvoe the old ship (if there is one) as this method should only be called from the generate ship button
-        if (currentShipID > 0)
-        {
-            GameObject currentShip = shipObjects[--currentShipID];
-            Destroy(currentShip);
-            shipObjects.RemoveAt(currentShipID);
-        }
+        // for now remove the old ship (if there is one) as this method should only be called from the generate ship buttons
+        ClearShip();
 
-        CreateShip(0, 0);
+        // choose one from the drop down
+        int shipType = prebuiltShipList.value;              //Random.Range(0, shipList.Count);
+        CreateShip(shipList[shipType], 0, 0);
 
     } // end Create ship at origine
 
     /// <summary>
     /// This method starts the instanition of a ship based
     /// </summary>
-    /// <param name="xPos">Where the ship should be in the world on the X axis</param>
-    /// <param name="zPos">Where the ship should be in the world on the Z axis</param>
+    /// <param name="xPos">Where the ship should be placed in the world on the X axis</param>
+    /// <param name="zPos">Where the ship should be placed in the world on the Z axis</param>
     // TODO: Look at making rooms child objects to see if we can use relative positioning? Then may not need to send xPos and zPos down
-    public void CreateShip(float xPos, float zPos)
+    public void CreateShip(RoomInfo[,] ship, float xPos, float zPos)
     {
         // create a ship in the list to store the data in for later
         GameObject shipObject = new GameObject("Ship" + currentShipID);
         shipObject.transform.position = new Vector3(xPos, 0, zPos);
-
         shipObjects.Add(shipObject);
 
-        // for now, choose a random ship for testing
-        int shipType = Random.Range(0, shipList.Count);
-
-        // build a ship
-        BuildShip(shipList[shipType], xPos, zPos);
+        // build the ship
+        BuildShip(ship, xPos, zPos);
 
         // increase the number of ships instantiated
         currentShipID++;
 
     } // end CreateShip
 
-    public void BuildShip(RoomInfo[,] ship, float worldPos_x, float worldPos_z)
+    /// <summary>
+    /// Build the ship using the room information and positional values in game
+    /// </summary>
+    /// <param name="ship">The ship as a room information layout array</param>
+    /// <param name="worldPos_x">The x world position for the top left of the ship</param>
+    /// <param name="worldPos_z">The z world position for the top left of the ship</param>
+    private void BuildShip(RoomInfo[,] ship, float worldPos_x, float worldPos_z)
     {
         // build the ship rooms based on the room layout
         for (int roomRow = 0; roomRow < ship.GetLength(0); roomRow++) 
@@ -170,6 +187,22 @@ public class ShipManager : MonoBehaviour
                 }
             }
         }
-    }
+
+    } // end BuildShip
+
+    /// <summary>
+    /// for now remove the old ship (if there is one) as this method should only be called from the generate ship buttons
+    /// </summary>
+    private void ClearShip()
+    {
+        // for now remvoe the old ship (if there is one) as this method should only be called from the generate ship button
+        if (currentShipID > 0)
+        {
+            GameObject currentShip = shipObjects[--currentShipID];
+            Destroy(currentShip);
+            shipObjects.RemoveAt(currentShipID);
+        }
+
+    } // end ClearShip
 
 }
