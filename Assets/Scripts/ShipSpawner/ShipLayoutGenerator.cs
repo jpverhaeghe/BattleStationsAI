@@ -2,7 +2,6 @@
 using System.Collections.Generic;
 using TMPro;
 using UnityEngine;
-using UnityEngine.UIElements.Experimental;
 using static RoomData;
 
 public class ShipLayoutGenerator : MonoBehaviour
@@ -60,6 +59,7 @@ public class ShipLayoutGenerator : MonoBehaviour
 
     // module specific variables
     private int numModulesToPlace;                          // keeps track of the number of modules placed
+    private int uniqueModulesPlaced;                        // to keep track of the modules placed so we can make sure at least one of each type that is not required
     private int helmRowPos;                                 // the position of the helm so we can make sure not to put modules in front of it
     private int helmColPos;                                 // the position of the helm so we can make sure not to put modules in front of it
 
@@ -119,6 +119,7 @@ public class ShipLayoutGenerator : MonoBehaviour
 
         // clear up the list to keep track of modules placed and rooms to fill
         placedShipModules.Clear();
+        uniqueModulesPlaced = 0;
         roomsToFill.Clear();
 
         // set up the ship dimensions
@@ -131,7 +132,7 @@ public class ShipLayoutGenerator : MonoBehaviour
         PlaceHelmModule();
 
         // debug information
-        Debug.Log("Ship Layout is " + shipHeight + " rows and " + shipWidth + " cols: Helm is at row " + helmRowPos + " and col " + helmColPos);
+        Debug.Log("Ship Layout is " + shipHeight + " rows and " + shipWidth + " cols: Helm is at rowPos " + helmRowPos + " and colPos " + helmColPos);
 
         // go through the helm exits one by one and build out the next room, subtracting one from the num rooms for the ship
         PlaceModules();
@@ -173,6 +174,12 @@ public class ShipLayoutGenerator : MonoBehaviour
 
             if (roomToPlace != null)
             {
+                // if the module type is not an engine or helm and not in the already placed list, then add one to the unique modules to place
+                if ( (roomToPlace.moduleType < ModuleType.Engine) && !placedShipModules.Contains(roomToPlace.moduleType))
+                {
+                    uniqueModulesPlaced++;
+                }
+
                 // check to see if it is in the list of require modules and remove it if it is
                 requiredShipModules.Remove(roomToPlace.moduleType);
                 placedShipModules.Add(roomToPlace.moduleType);
@@ -218,23 +225,28 @@ public class ShipLayoutGenerator : MonoBehaviour
     /// <param name="currentColPos"></param>
     private RoomInfo PlaceModule(int currentRowPos, int currentColPos)
     {
-        // TODO: Certain modules only need one (unless we want redundancy - in case one goes down)
-        //          - no need for two teleporters
-        //          - do we need more life supports than required
-        //          - would like to preference things like cargo bays, weapons, etc.
-
         // set up the potential room data to be null by default
         RoomInfo roomToPlace = null;
 
         // don't place a module if it is obscuring the helm and check to see if the room has already been placed
         if (!CheckObscureHelm(currentRowPos, currentColPos) && (shipLayout[currentRowPos, currentColPos] == null))
         {
-            // choose a random module - subtracting two as we don't randomize helm and engines are done after all other modules
-            ModuleType moduleType = (ModuleType)Random.Range(0, System.Enum.GetNames(typeof(ModuleType)).Length - 2);
+            // choose a random module - using the value of Engine as we don't randomize helm and engines are done after all other modules
+            // Engine is the module type just at the end of the normal placeable modules so we can just use it's value
+            ModuleType moduleType = (ModuleType)Random.Range(0, (int)ModuleType.Engine);
 
-            // trying to keep modules from duplicating too much
-            // - want to use while loop, but if all modules in the list, it may get stuck in infinite loop
-            //while (!placedShipModules.Contains(moduleType)) { }
+            // trying to keep modules from duplicating, so we have at least one of each if there is room
+            if (uniqueModulesPlaced < (int)ModuleType.Engine) 
+            {
+                // Certain modules only need one like to preference things like cargo bays, weapons, etc.
+                // we can preference certain modules by breaking this loop if they are randomly generated
+                // TODO: May need to this after all unique ones are placed
+                while ((moduleType != ModuleType.Cannon) && (moduleType != ModuleType.CargoBay) && (moduleType != ModuleType.MissileBay) && 
+                        placedShipModules.Contains(moduleType))
+                {
+                    moduleType = (ModuleType)Random.Range(0, (int)ModuleType.Engine);
+                }
+            }
 
             // verification that the module must be chosen from the required list here before moving on
             // not sure if less than should be here, but just in case adding it so we don't go below
@@ -244,7 +256,7 @@ public class ShipLayoutGenerator : MonoBehaviour
                 while (!requiredShipModules.Contains(moduleType))
                 {
                     // choose another random module - subtracting two as we don't randomize helm and engines are done after all other modules
-                    moduleType = (ModuleType)Random.Range(0, System.Enum.GetNames(typeof(ModuleType)).Length - 2);
+                    moduleType = (ModuleType)Random.Range(0, (int)ModuleType.Engine);
                 }
             }
 
@@ -291,13 +303,14 @@ public class ShipLayoutGenerator : MonoBehaviour
     private void PlaceEngineModules()
     {
         // all engines are placed facing the direction of the helm, so just get a pointer to the data that we can add for each one
-        RoomInfo engineToPlace = roomsByModules[(int)ModuleType.Engine][(int)RoomFacing.Up];
+        RoomInfo engineToPlace;
 
         // go through each engine and try to place them at the back of the ship, starting at the center and working out
         // based on where the helm is
         for (int engineNum = 0; engineNum < numEnginesNeeded; engineNum++)
         {
-            bool foundPlacement = false;
+            // clear out engine data to place the next one
+            engineToPlace = null;
             int[] enginePos = new int[2];
 
             // find a position as far away from the helm that is attached to the ship
@@ -305,14 +318,14 @@ public class ShipLayoutGenerator : MonoBehaviour
             // we go from the bottom up here and find the first empty space we can add an engine too
             int row = shipHeight - 1;
 
-            while (!foundPlacement && (row >= 0))
+            while ((engineToPlace == null) && (row >= 0))
             {
-                foundPlacement = CheckEngineColPlacement(row, enginePos);
+                engineToPlace = CheckEngineColPlacement(row, enginePos);
                 row--;
             }
 
             // place the engine if space was found
-            if (foundPlacement)
+            if (engineToPlace != null)
             {
                 shipLayout[enginePos[0], enginePos[1]] = engineToPlace;
                 //DebugDrawModule(engineToPlace, enginePos[0], enginePos[1]);
@@ -330,118 +343,107 @@ public class ShipLayoutGenerator : MonoBehaviour
     /// Goes through a column in the ship array and checks to see if there is room to place an engine, starting at the center
     /// and moving out in both directgions
     /// </summary>
-    /// <param name="row">The row of the ship layout to look at</param>
+    /// <param name="rowPos">The rowPos of the ship layout to look at</param>
     /// <param name="enginePos">An array that will contain the engine positions if a placement was found</param>
     /// <returns></returns>
-    private bool CheckEngineColPlacement(int row, int[] enginePos)
+    private RoomInfo CheckEngineColPlacement(int rowPos, int[] enginePos)
     {
-        bool foundPlacement = false;
-
+        RoomInfo engineToPlace = null;
         int colIncrementor = 1;
         int widthTest = shipWidth / 2;
 
-        // col starting placement will depend on the width to get all since we start moving right,
+        // colPos starting placement will depend on the width to get all since we start moving right,
         // so if the width of the array is even, we need to start at one less and test against that value
         if (shipWidth % 2 == 0)
         {
             widthTest--;
         }
 
-        int col = widthTest;
+        int colPos = widthTest;
 
-        int[] offsets = new int[2];
-
-        while (!foundPlacement && ((col >= 0) && (col < shipWidth)))
+        while ((engineToPlace == null) && ((colPos >= 0) && (colPos < shipWidth)))
         {
-            if (shipLayout[row, col] != null)
+            // set up the test variables to make it easier to read
+            int testRowPos = rowPos;
+            int testColPos = colPos;
+
+            // check to see if this space doesn't obscure the helm and is available 
+            if (!CheckObscureHelm(rowPos, colPos) && (shipLayout[rowPos, colPos] == null))
             {
-                // can we place below (there is room)
-                offsets[0] = 1;
-                foundPlacement = CheckEnginePlacement(row, col, offsets[0], offsets[1], RoomFacing.Up);
-
-                // look right to see if we can add there (if we didn't find the location already)
-                if (!foundPlacement)
+                // we can only place an engine if it is next to another module
+                // we only need to look up, right and left as engine modules always get placed with down facing
+                // up 
+                testRowPos -= 1;
+                if ( (testRowPos >= 0) && (shipLayout[testRowPos, testColPos] != null))
                 {
-                    offsets[0] = 0;
-                    offsets[1] = 1;
-                    foundPlacement = CheckEnginePlacement(row, col, offsets[0], offsets[1], RoomFacing.Left);
+                    engineToPlace = GetRoomWithFacing(ModuleType.Engine, rowPos, colPos);
                 }
 
-                // lastly look left as we can't put things above (if we didn't find the location already)
-                if (!foundPlacement)
+                // right - only if it didn't get placed above
+                if (engineToPlace == null) 
                 {
-                    offsets[0] = 0;
-                    offsets[1] = -1;
-                    foundPlacement = CheckEnginePlacement(row, col, offsets[0], offsets[1], RoomFacing.Right);
+                    // must reset the position then go right one
+                    testRowPos = rowPos;
+                    testColPos++;
+
+                    if ((testColPos < shipWidth) && (shipLayout[testRowPos, testColPos] != null))
+                    {
+                        engineToPlace = GetRoomWithFacing(ModuleType.Engine, rowPos, colPos);
+                    }
                 }
 
-                enginePos[0] = row + offsets[0];
-                enginePos[1] = col + offsets[1];
+                // left 
+                if (engineToPlace == null)
+                {
+                    // must reset the position then go left one
+                    testRowPos = rowPos;
+                    testColPos = colPos - 1;
+
+                    if ((testColPos >= 0) && (shipLayout[testRowPos, testColPos] != null))
+                    {
+                        engineToPlace = GetRoomWithFacing(ModuleType.Engine, rowPos, colPos);
+                    }
+                }
             }
 
-            if (col <= widthTest)
+            // if there was a potential engine placement
+            if (engineToPlace != null)
             {
-                col += colIncrementor;
+                // if the facing is not down, we can't place the engine here so make it null
+                if (engineToPlace.roomFacing != RoomFacing.Down)
+                {
+                    engineToPlace = null;
+                }
+                // set the engine position values to this spot
+                else
+                {
+                    enginePos[0] = rowPos;
+                    enginePos[1] = colPos;
+                }
+            }
+
+            // update the column position alternating between left and right from center
+            if (colPos <= widthTest)
+            {
+                colPos += colIncrementor;
             }
             else
             {
-                col -= colIncrementor;
+                colPos -= colIncrementor;
             }
 
             colIncrementor++;
         }
 
-        return foundPlacement;
+        return engineToPlace;
 
     } // end CheckEngineColPlacement
 
-    private bool CheckEnginePlacement(int row, int col, int rowOffset, int colOffset, RoomFacing testFacing)
-    {
-        // TODO: Do we need to look left and right to verify if we can place as well (may be moot if outward facing works well)
-        bool foundPlacement = false;
-
-        // create some variables to hold the updated row and column to check
-        int newRow = (row + rowOffset);
-        int newCol = (col + colOffset);
-
-        // test to see if the updated value is not obscuring the helm and is in range (only one of these should actually change)
-        if (!CheckObscureHelm(newRow, newCol) && 
-            (newRow >= 0) && (newRow < shipHeight) && (newCol >= 0) && (newCol < shipWidth))
-        {
-            // check to see if the space is available, the module we are coming from doesn't have a wall this way
-            if ((shipLayout[newRow, newCol] == null) &&
-                 (!shipLayout[row, col].externalFacing ||
-                  (shipLayout[row, col].roomFacing != testFacing)))
-            {
-                // lastly check that the module we are placing isn't being placed over an exit
-                // (always faces the up - the helm's direction)
-                // TODO: Need to make it so it looks at potential neighbors aren't external facing towards this room!
-
-                // check in bounds (don't need to look below an edge case)
-                if ((newRow + 1) < shipHeight - 1)
-                {
-                    // can only place here if there is no room below
-                    if (shipLayout[(newRow + 1), newCol] == null)
-                    {
-                        foundPlacement = true;
-                    }
-                }
-                // if on the edge, then just place it
-                else if (newRow == (shipHeight - 1))
-                {
-                    foundPlacement = true;
-                }
-            }
-        }
-
-        return foundPlacement;
-
-    } // end CheckEnginePlacement
 
     /// <summary>
     /// Adds potential rooms to the queue of rooms to place if the room would be in bounds
     /// </summary>
-    /// <param name="rowPos">the row position of the room to place</param>
+    /// <param name="rowPos">the rowPos position of the room to place</param>
     /// <param name="colPos">the column position of the room to place</param>
     private void AddRoomToPlace(int rowPos, int colPos)
     {
@@ -467,20 +469,28 @@ public class ShipLayoutGenerator : MonoBehaviour
     /// Gets the room to place if the room can be placed with appropriate facing
     /// </summary>
     /// <param name="moduleType">The the module type we are going to place</param>
-    /// <param name="currentRowPos">The current row position to place this module in the ship array</param>
+    /// <param name="currentRowPos">The current rowPos position to place this module in the ship array</param>
     /// <param name="currentColPos">The current column position to place this module in the ship array</param>
     /// <returns></returns>
     private RoomInfo GetRoomWithFacing(ModuleType moduleType, int currentRowPos, int currentColPos)
     {
         // assume everything is facing the direction of the helm for now and grab the room we want to place
         RoomFacing currentFacing = RoomFacing.Up;
+
+        // set default for engines to be down so they are facing the same way as the helm
+        if (moduleType == ModuleType.Engine)
+        {
+            currentFacing = RoomFacing.Down;
+        }
+
+        // set up the room to place - gets set to null if it can't be placed
         RoomInfo roomToPlace = roomsByModules[(int)moduleType][(int)currentFacing];
 
         // some room modules must be external facing such as cannons, cloaking, engines, helm, missile bays, mine layer
         //  - Cargo bays do not require external facing, however some will need it to put certain modules into them
         //  - Helm was placed first and is not looked at here
-        //  - Engines must face the way the helm is facing - but are placed last and not looked at here
-        //  - All other external facing modules have walls on the exit that should face the outside
+        //  - Engines must face the way the helm is facing
+        //  - All external facing modules but helm have walls on the exit that should face the outside
         if (roomToPlace.externalFacing)
         {
             ExitDirection exitsAvailable = ExitDirection.None;
@@ -499,31 +509,15 @@ public class ShipLayoutGenerator : MonoBehaviour
             // if we are on the edge, then just face that direction
             else
             {
-                currentFacing = RoomFacing.Up;
-                onEdge = true;
-            }
-
-            // Right - check only if we didn't come from there
-            if (!onEdge)
-            {
-                // if we are in bounds, but not on the edge
-                if ((currentColPos + 1) < shipWidth)
+                // engines must take precidence when on the edge for facing down, so don't change them
+                if (moduleType != ModuleType.Engine)
                 {
-                    // if there isn't a module there, we can face that way
-                    if (shipLayout[currentRowPos, currentColPos + 1] == null)
-                    {
-                        exitsAvailable |= ExitDirection.Right;
-                    }
-                }
-                // if we are on the edge, then just face that direction
-                else
-                {
-                    currentFacing = RoomFacing.Right;
+                    currentFacing = RoomFacing.Up;
                     onEdge = true;
                 }
             }
 
-            // Down - check only if we didn't come from there
+            // Down - check only if we didn't hit an edge or are an engine
             if (!onEdge)
             {
                 // if we are in bounds, but not on the edge
@@ -543,6 +537,30 @@ public class ShipLayoutGenerator : MonoBehaviour
                 }
             }
 
+            // Right - check only if we didn't come from there
+            if (!onEdge)
+            {
+                // if we are in bounds, but not on the edge
+                if ((currentColPos + 1) < shipWidth)
+                {
+                    // if there isn't a module there, we can face that way
+                    if (shipLayout[currentRowPos, currentColPos + 1] == null)
+                    {
+                        exitsAvailable |= ExitDirection.Right;
+                    }
+                }
+                // if we are on the edge, then just face that direction
+                else
+                {
+                    // engines must take precidence when on the edge for facing down, so don't change them
+                    if (moduleType != ModuleType.Engine)
+                    {
+                        currentFacing = RoomFacing.Right;
+                        onEdge = true;
+                    }
+                }
+            }
+
             // Left - check only if we didn't come from there
             if (!onEdge)
             {
@@ -558,8 +576,12 @@ public class ShipLayoutGenerator : MonoBehaviour
                 // if we are on the edge, then just face that direction
                 else
                 {
-                    currentFacing = RoomFacing.Left;
-                    onEdge = true;
+                    // engines must take precidence when on the edge for facing down, so don't change them
+                    if (moduleType != ModuleType.Engine)
+                    {
+                        currentFacing = RoomFacing.Left;
+                        onEdge = true;
+                    }
                 }
             }
 
@@ -576,15 +598,15 @@ public class ShipLayoutGenerator : MonoBehaviour
                 {
                     roomToPlace = roomsByModules[(int)moduleType][(int)RoomFacing.Up];
                 }
-                // next is right
-                else if (exitsAvailable.HasFlag(ExitDirection.Right))
-                {
-                    roomToPlace = roomsByModules[(int)moduleType][(int)RoomFacing.Right];
-                }
                 // then down
                 else if (exitsAvailable.HasFlag(ExitDirection.Down))
                 {
                     roomToPlace = roomsByModules[(int)moduleType][(int)RoomFacing.Down];
+                }
+                // next is right
+                else if (exitsAvailable.HasFlag(ExitDirection.Right))
+                {
+                    roomToPlace = roomsByModules[(int)moduleType][(int)RoomFacing.Right];
                 }
                 // then left
                 else if (exitsAvailable.HasFlag(ExitDirection.Left))
@@ -620,8 +642,8 @@ public class ShipLayoutGenerator : MonoBehaviour
     /// <summary>
     /// Checks to see if placed room would obscure the helm module
     /// </summary>
-    /// <param name="currentRowPos">The room row position attempting to be placed</param>
-    /// <param name="currentColPos">The room col position attempting to be placed</param>
+    /// <param name="currentRowPos">The room rowPos position attempting to be placed</param>
+    /// <param name="currentColPos">The room colPos position attempting to be placed</param>
     /// <returns>true if the helm visibility would be obscured, false if not</returns>
     private bool CheckObscureHelm(int currentRowPos, int currentColPos)
     {
@@ -638,7 +660,7 @@ public class ShipLayoutGenerator : MonoBehaviour
     /// <summary>
     /// Goes through potential rooms and checks to see if it would be blocked
     /// </summary>
-    /// <param name="currentRowPos">The ship layout row position to test</param>
+    /// <param name="currentRowPos">The ship layout rowPos position to test</param>
     /// <param name="currentColPos">The ship layout column positin to test</param>
     /// <returns></returns>
     public ExitDirection CheckExitsBlocked(int currentRowPos, int currentColPos)
@@ -843,10 +865,10 @@ public class ShipLayoutGenerator : MonoBehaviour
         {
             // calculate the world position for this room to send down
 
-            // as rooms can be offset from other rooms based on location in the ship, set the roomPos_z to the current row times the height of a room
+            // as rooms can be offset from other rooms based on location in the ship, set the roomPos_z to the current rowPos times the height of a room
             float roomPos_z = 0 - (roomRow * RoomSpawner.ROOM_HEIGHT);
 
-            // as rooms can be offset from other rooms based on location in the ship, set the roomPos_x to the current col times the width of a room
+            // as rooms can be offset from other rooms based on location in the ship, set the roomPos_x to the current colPos times the width of a room
             float roomPos_x = 0 + (roomCol * RoomSpawner.ROOM_WIDTH);
 
             // instantiates the room objects based on the strings in the arrays 

@@ -146,26 +146,6 @@ public static class RoomData
 
     // all engine orientations - External facing - special case placed last
     public static RoomTiles[,] EngineUp = {
-        {RoomTiles.Empty,   RoomTiles.Wall,     RoomTiles.Wall,     RoomTiles.Empty,    RoomTiles.Wall,     RoomTiles.Wall,     RoomTiles.Empty},
-        {RoomTiles.Wall,    RoomTiles.Floor,    RoomTiles.Floor,    RoomTiles.Floor,    RoomTiles.Floor,    RoomTiles.Floor,    RoomTiles.Wall},
-        {RoomTiles.Wall,    RoomTiles.Floor,    RoomTiles.Area,     RoomTiles.Area,     RoomTiles.Area,     RoomTiles.Floor,    RoomTiles.Wall},
-        {RoomTiles.Empty,   RoomTiles.Floor,    RoomTiles.Area,     RoomTiles.Area,     RoomTiles.Area,     RoomTiles.Floor,    RoomTiles.Empty},
-        {RoomTiles.Wall,    RoomTiles.Floor,    RoomTiles.Star,     RoomTiles.Area,     RoomTiles.Star,     RoomTiles.Floor,    RoomTiles.Wall},
-        {RoomTiles.Wall,    RoomTiles.Area,     RoomTiles.Area,     RoomTiles.Area,     RoomTiles.Area,     RoomTiles.Area,     RoomTiles.Wall},
-        {RoomTiles.Empty,   RoomTiles.Wall,     RoomTiles.Wall,     RoomTiles.Wall,     RoomTiles.Wall,     RoomTiles.Wall,     RoomTiles.Empty}
-    };
-
-    public static RoomTiles[,] EngineRight = {
-        {RoomTiles.Empty,   RoomTiles.Wall,     RoomTiles.Wall,     RoomTiles.Empty,    RoomTiles.Wall,     RoomTiles.Wall,     RoomTiles.Empty},
-        {RoomTiles.Wall,    RoomTiles.Area,     RoomTiles.Floor,    RoomTiles.Floor,    RoomTiles.Floor,    RoomTiles.Floor,    RoomTiles.Wall},
-        {RoomTiles.Wall,    RoomTiles.Area,     RoomTiles.Star,     RoomTiles.Area,     RoomTiles.Area,     RoomTiles.Floor,    RoomTiles.Wall},
-        {RoomTiles.Wall,    RoomTiles.Area,     RoomTiles.Area,     RoomTiles.Area,     RoomTiles.Area,     RoomTiles.Floor,    RoomTiles.Empty},
-        {RoomTiles.Wall,    RoomTiles.Area,     RoomTiles.Star,     RoomTiles.Area,     RoomTiles.Area,     RoomTiles.Floor,    RoomTiles.Wall},
-        {RoomTiles.Wall,    RoomTiles.Area,     RoomTiles.Floor,    RoomTiles.Floor,    RoomTiles.Floor,    RoomTiles.Floor,    RoomTiles.Wall},
-        {RoomTiles.Empty,   RoomTiles.Wall,     RoomTiles.Wall,     RoomTiles.Empty,    RoomTiles.Wall,     RoomTiles.Wall,     RoomTiles.Empty},
-    };
-
-    public static RoomTiles[,] EngineDown = {
         {RoomTiles.Empty,   RoomTiles.Wall,     RoomTiles.Wall,     RoomTiles.Wall,     RoomTiles.Wall,     RoomTiles.Wall,     RoomTiles.Empty},
         {RoomTiles.Wall,    RoomTiles.Area,     RoomTiles.Area,     RoomTiles.Area,     RoomTiles.Area,     RoomTiles.Area,     RoomTiles.Wall},
         {RoomTiles.Wall,    RoomTiles.Floor,    RoomTiles.Star,     RoomTiles.Area,     RoomTiles.Star,     RoomTiles.Floor,    RoomTiles.Wall},
@@ -175,13 +155,33 @@ public static class RoomData
         {RoomTiles.Empty,   RoomTiles.Wall,     RoomTiles.Wall,     RoomTiles.Empty,    RoomTiles.Wall,     RoomTiles.Wall,     RoomTiles.Empty},
     };
 
-    public static RoomTiles[,] EngineLeft = {
+    public static RoomTiles[,] EngineRight = {
         {RoomTiles.Empty,   RoomTiles.Wall,     RoomTiles.Wall,     RoomTiles.Empty,    RoomTiles.Wall,     RoomTiles.Wall,     RoomTiles.Empty},
         {RoomTiles.Wall,    RoomTiles.Floor,    RoomTiles.Floor,    RoomTiles.Floor,    RoomTiles.Floor,    RoomTiles.Area,     RoomTiles.Wall},
         {RoomTiles.Wall,    RoomTiles.Floor,    RoomTiles.Area,     RoomTiles.Area,     RoomTiles.Star,     RoomTiles.Area,     RoomTiles.Wall},
         {RoomTiles.Empty,   RoomTiles.Floor,    RoomTiles.Area,     RoomTiles.Area,     RoomTiles.Area,     RoomTiles.Area,     RoomTiles.Wall},
         {RoomTiles.Wall,    RoomTiles.Floor,    RoomTiles.Area,     RoomTiles.Area,     RoomTiles.Star,     RoomTiles.Area,     RoomTiles.Wall},
         {RoomTiles.Wall,    RoomTiles.Floor,    RoomTiles.Floor,    RoomTiles.Floor,    RoomTiles.Floor,    RoomTiles.Area,     RoomTiles.Wall},
+        {RoomTiles.Empty,   RoomTiles.Wall,     RoomTiles.Wall,     RoomTiles.Empty,    RoomTiles.Wall,     RoomTiles.Wall,     RoomTiles.Empty},
+    };
+
+    public static RoomTiles[,] EngineDown = {
+        {RoomTiles.Empty,   RoomTiles.Wall,     RoomTiles.Wall,     RoomTiles.Empty,    RoomTiles.Wall,     RoomTiles.Wall,     RoomTiles.Empty},
+        {RoomTiles.Wall,    RoomTiles.Floor,    RoomTiles.Floor,    RoomTiles.Floor,    RoomTiles.Floor,    RoomTiles.Floor,    RoomTiles.Wall},
+        {RoomTiles.Wall,    RoomTiles.Floor,    RoomTiles.Area,     RoomTiles.Area,     RoomTiles.Area,     RoomTiles.Floor,    RoomTiles.Wall},
+        {RoomTiles.Empty,   RoomTiles.Floor,    RoomTiles.Area,     RoomTiles.Area,     RoomTiles.Area,     RoomTiles.Floor,    RoomTiles.Empty},
+        {RoomTiles.Wall,    RoomTiles.Floor,    RoomTiles.Star,     RoomTiles.Area,     RoomTiles.Star,     RoomTiles.Floor,    RoomTiles.Wall},
+        {RoomTiles.Wall,    RoomTiles.Area,     RoomTiles.Area,     RoomTiles.Area,     RoomTiles.Area,     RoomTiles.Area,     RoomTiles.Wall},
+        {RoomTiles.Empty,   RoomTiles.Wall,     RoomTiles.Wall,     RoomTiles.Wall,     RoomTiles.Wall,     RoomTiles.Wall,     RoomTiles.Empty}
+    };
+
+    public static RoomTiles[,] EngineLeft = {
+        {RoomTiles.Empty,   RoomTiles.Wall,     RoomTiles.Wall,     RoomTiles.Empty,    RoomTiles.Wall,     RoomTiles.Wall,     RoomTiles.Empty},
+        {RoomTiles.Wall,    RoomTiles.Area,     RoomTiles.Floor,    RoomTiles.Floor,    RoomTiles.Floor,    RoomTiles.Floor,    RoomTiles.Wall},
+        {RoomTiles.Wall,    RoomTiles.Area,     RoomTiles.Star,     RoomTiles.Area,     RoomTiles.Area,     RoomTiles.Floor,    RoomTiles.Wall},
+        {RoomTiles.Wall,    RoomTiles.Area,     RoomTiles.Area,     RoomTiles.Area,     RoomTiles.Area,     RoomTiles.Floor,    RoomTiles.Empty},
+        {RoomTiles.Wall,    RoomTiles.Area,     RoomTiles.Star,     RoomTiles.Area,     RoomTiles.Area,     RoomTiles.Floor,    RoomTiles.Wall},
+        {RoomTiles.Wall,    RoomTiles.Area,     RoomTiles.Floor,    RoomTiles.Floor,    RoomTiles.Floor,    RoomTiles.Floor,    RoomTiles.Wall},
         {RoomTiles.Empty,   RoomTiles.Wall,     RoomTiles.Wall,     RoomTiles.Empty,    RoomTiles.Wall,     RoomTiles.Wall,     RoomTiles.Empty},
     };
 
