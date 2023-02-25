@@ -114,8 +114,7 @@ public class ShipManager : MonoBehaviour
         // for now remove the old ship (if there is one) as this method should only be called from the generate ship buttons
         ClearShip();
 
-        // for debug, sending this down so we can build the ship each room iteration
-        //RoomInfo[,] ship = shipLayoutGeneratorScript.GenerateShipLayout(this);
+        // Get the room info layout and create the ship
         RoomInfo[,] ship = shipLayoutGeneratorScript.GenerateShipLayout();
         CreateShip(ship, 0, 0);
 
@@ -140,7 +139,6 @@ public class ShipManager : MonoBehaviour
     /// </summary>
     /// <param name="xPos">Where the ship should be placed in the world on the X axis</param>
     /// <param name="zPos">Where the ship should be placed in the world on the Z axis</param>
-    // TODO: Look at making rooms child objects to see if we can use relative positioning? Then may not need to send xPos and zPos down
     public void CreateShip(RoomInfo[,] ship, float xPos, float zPos)
     {
         // create a ship in the list to store the data in for later

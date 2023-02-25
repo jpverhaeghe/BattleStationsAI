@@ -27,7 +27,7 @@ public class RoomSpawner : MonoBehaviour
     [SerializeField] List<GameObject> tileObjects;                      // the tiles that will be used to build the rooms
     [SerializeField] GameObject floorPrefab;                            // the floor tile prefab
     [SerializeField] GameObject wallPrefab;                             // the wall prefab to put up room boundaries
-    [SerializeField] Material[] tileMaterials;                              // room type tileMaterials to apply to the room tiles based on the room type
+    [SerializeField] Material[] tileMaterials;                          // room type tileMaterials to apply to the room tiles based on the room type
     [SerializeField] Texture floorTileTexture;                          // the texture to apply to floor tiles
     [SerializeField] Texture starTileTexture;                           // the texture to apply to star tiles
 

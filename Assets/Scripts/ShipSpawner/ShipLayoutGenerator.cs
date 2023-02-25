@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using TMPro;
 using UnityEngine;
+using UnityEngine.UIElements.Experimental;
 using static RoomData;
 
 public class ShipLayoutGenerator : MonoBehaviour
@@ -17,6 +18,17 @@ public class ShipLayoutGenerator : MonoBehaviour
         Destroyer,      // Size should be 5 - 15 to 17 rooms
         Cruiser,        // Size should be 6 - 18 to 20 rooms
         Dreadnought,    // Size should be 7 - 21 to 23 rooms
+    }
+
+    [System.Flags]
+    public enum ExitDirection
+    {
+        None = 0,
+        Up = 1 << None,
+        Right = 1 << Up,
+        Down = 1 << Right,
+        Left = 1 << Down,
+        All = Up | Right | Down | Left,
     }
 
     public struct PotentialRoomPos
@@ -51,7 +63,10 @@ public class ShipLayoutGenerator : MonoBehaviour
     private int helmRowPos;                                 // the position of the helm so we can make sure not to put modules in front of it
     private int helmColPos;                                 // the position of the helm so we can make sure not to put modules in front of it
 
-    //private ShipManager shipManager;                        // for testing purposes so we can see the ship being created room by room
+    // Debug variables to make it easier to debug this code visually
+    //private RoomSpawner roomSpawner;                        // for testing purposes so we can see the ship being created room by room
+    //private GameObject shipParentObject;                    // to attach the rooms to
+    //public bool debugIsOn;
 
     /// <summary>
     /// Start is called before the first frame update to set up variables, etc. for this script
@@ -66,17 +81,38 @@ public class ShipLayoutGenerator : MonoBehaviour
         placedShipModules = new List<ModuleType>();
         roomsToFill = new Queue<PotentialRoomPos>();
 
+        // debug code
+        //roomSpawner = GameObject.Find("ShipSpawner").GetComponent<RoomSpawner>();
+
     } // end Start
+
+    /// <summary>
+    /// Turns the debug mode on
+    /// </summary>
+    /*public void ToggleDebug()
+    {
+        debugIsOn = !debugIsOn;
+    }*/
 
     /// <summary>
     /// Generates a ship layout based on data from the UI - such as the size drop down
     /// </summary>
-    /// <returns>RoomInfo[,] - the layout in a double array format of RoomInfo</returns>
+    /// <returns>RoomInfo[,] - the generated layout in a double array format of RoomInfo</returns>
+    //public RoomInfo[,] GenerateShipLayout()
     public RoomInfo[,] GenerateShipLayout()
-    //public RoomInfo[,] GenerateShipLayout(ShipManager shipManager)
     {
         // debug code
-        //this.shipManager = shipManager;
+        /*if (debugIsOn)
+        {
+            if (shipParentObject != null)
+            {
+                Destroy(shipParentObject);
+            }
+
+            // create a ship in the list to store the data in for later
+            shipParentObject = new GameObject("Ship");
+            shipParentObject.transform.position = new Vector3(0, 0, 0);
+        }*/
 
         // TODO: Add race as an option so we can change building based on the rules of each race
         //       For example: Tentac - External modules ignore facing restrictions and have 360 degree firing arc.
@@ -108,8 +144,17 @@ public class ShipLayoutGenerator : MonoBehaviour
         {
             LogRequiredModuleList();
             GenerateShipLayout();
-            //GenerateShipLayout(shipManager);
+            //GenerateShipLayout(debug);
         }
+
+        // if debug mode is on, clean up as we leave
+        /*if (debugIsOn)
+        {
+            if (shipParentObject != null)
+            {
+                Destroy(shipParentObject);
+            }
+        }*/
 
         // return the layout generated
         return shipLayout;
@@ -160,10 +205,7 @@ public class ShipLayoutGenerator : MonoBehaviour
 
                 // add the module to the ship layout 
                 shipLayout[potentialRoomPos.rowPos, potentialRoomPos.colPos] = roomToPlace;
-
-                // debug code to preview the ship as it is built
-                //shipManager.ClearShip();
-                //shipManager.CreateShip(shipLayout, 0, 0);
+                //DebugDrawModule(roomToPlace, potentialRoomPos.rowPos, potentialRoomPos.colPos);
             }
         }
 
@@ -214,189 +256,6 @@ public class ShipLayoutGenerator : MonoBehaviour
     } // end PlaceModule
 
     /// <summary>
-    /// Gets the room to place if the room can be placed with appropriate facing
-    /// </summary>
-    /// <param name="moduleType">The the module type we are going to place</param>
-    /// <param name="currentRowPos">The current row position to place this module in the ship array</param>
-    /// <param name="currentColPos">The current column position to place this module in the ship array</param>
-    /// <returns></returns>
-    private RoomInfo GetRoomWithFacing(ModuleType moduleType, int currentRowPos, int currentColPos)
-    {
-        // assume everything is facing the direction of the helm for now and grab the room we want to place
-        RoomFacing currentFacing = RoomFacing.Up;
-        RoomInfo roomToPlace = roomsByModules[(int)moduleType][(int)currentFacing];
-
-        // some room modules must be external facing such as cannons, cloaking, engines, helm, missile bays, mine layer
-        //  - Cargo bays do not require external facing, however some will need it to put certain modules into them
-        //  - Helm was placed first and is not looked at here
-        //  - Engines must face the way the helm is facing - but are placed last and not looked at here
-        //  - All other external facing modules have walls on the exit that should face the outside
-        if (roomToPlace.externalFacing)
-        {
-            bool facingFound = false;
-
-            // if there are rooms around, make sure we are not putting a wall to them
-            // if we are in bounds, but not on the edge
-            if ((currentRowPos - 1) >= 0)
-            {
-                // if there isn't a module there, we can face that way
-                if (shipLayout[currentRowPos - 1, currentColPos] == null)
-                {
-                    currentFacing = RoomFacing.Up;
-                    facingFound = true;
-                }
-            }
-            // if we are on the edge, then just face that direction
-            else
-            {
-                currentFacing = RoomFacing.Up;
-                facingFound = true;
-            }
-
-            // Right - check only if we didn't come from there
-            if (!facingFound)
-            {
-                // if we are in bounds, but not on the edge
-                if ((currentColPos + 1) < shipWidth)
-                {
-                    // if there isn't a module there, we can face that way
-                    if (shipLayout[currentRowPos, currentColPos + 1] == null)
-                    {
-                        currentFacing = RoomFacing.Right;
-                        facingFound = true;
-                    }
-                }
-                // if we are on the edge, then just face that direction
-                else
-                {
-                    currentFacing = RoomFacing.Right;
-                    facingFound = true;
-                }
-            }
-
-            // Down - check only if we didn't come from there
-            if (!facingFound)
-            {
-                // if we are in bounds, but not on the edge
-                if ((currentRowPos + 1) < shipHeight)
-                {
-                    // if there isn't a module there, we can face that way
-                    if (shipLayout[currentRowPos + 1, currentColPos] == null)
-                    {
-                        currentFacing = RoomFacing.Down;
-                        facingFound = true;
-                    }
-                }
-                // if we are on the edge, then just face that direction
-                else
-                {
-                    currentFacing = RoomFacing.Down;
-                    facingFound = true;
-                }
-            }
-
-            // Left - check only if we didn't come from there
-            if (!facingFound)
-            {
-                // if we are in bounds, but not on the edge
-                if ((currentColPos - 1) >= 0)
-                {
-                    // if there isn't a module there, we can face that way
-                    if (shipLayout[currentRowPos, currentColPos - 1] == null)
-                    {
-                        currentFacing = RoomFacing.Left;
-                        facingFound = true;
-                    }
-                }
-                // if we are on the edge, then just face that direction
-                else
-                {
-                    currentFacing = RoomFacing.Left;
-                    facingFound = true;
-                }
-            }
-
-            // change the room if the facing changed and isn't the exit direction
-            if (facingFound)
-            {
-                roomToPlace = roomsByModules[(int)moduleType][(int)currentFacing];
-            }
-            // if we get here and have a facing the same as the exit - then we can't place the room either
-            else 
-            { 
-                roomToPlace = null;
-            }
-        }
-        // non external facing rooms need to have exit space in all directions
-        else
-        {
-            // the number of invalid exits (empty space is valid)
-            int numInvalidExits = 0;
-
-            // Up
-            // if we are in bounds, but not on the edge
-            if ((currentRowPos - 1) >= 0)
-            {
-                // if there ist a module there, it has external facing that is facing us, then exit is blocked
-                if ((shipLayout[currentRowPos - 1, currentColPos] != null) &&
-                    (!shipLayout[currentRowPos - 1, currentColPos].externalFacing &&
-                    (shipLayout[currentRowPos - 1, currentColPos].roomFacing != RoomFacing.Down)))
-                {
-                    numInvalidExits++;
-                }
-            }
-
-            // Right
-            // if we are in bounds, but not on the edge
-            if ((currentColPos + 1) < shipWidth)
-            {
-                // if there ist a module there, it has external facing that is facing us, then exit is blocked
-                if ((shipLayout[currentRowPos, currentColPos + 1] != null) &&
-                    (!shipLayout[currentRowPos, currentColPos + 1].externalFacing &&
-                    (shipLayout[currentRowPos, currentColPos + 1].roomFacing != RoomFacing.Left)))
-                {
-                    numInvalidExits++;
-                }
-            }
-
-            // Down
-            // if we are in bounds, but not on the edge
-            if ((currentRowPos + 1) < shipHeight)
-            {
-                // if there ist a module there, it has external facing that is facing us, then exit is blocked
-                if ((shipLayout[currentRowPos + 1, currentColPos] != null) &&
-                    (!shipLayout[currentRowPos + 1, currentColPos].externalFacing &&
-                    (shipLayout[currentRowPos + 1, currentColPos].roomFacing != RoomFacing.Up)))
-                {
-                    numInvalidExits++;
-                }
-            }
-
-            // Left
-            // if we are in bounds, but not on the edge
-            if ((currentColPos - 1) >= 0)
-            {
-                // if there ist a module there, it has external facing that is facing us, then exit is blocked
-                if ((shipLayout[currentRowPos, currentColPos - 1] != null) &&
-                    (!shipLayout[currentRowPos, currentColPos - 1].externalFacing &&
-                    (shipLayout[currentRowPos, currentColPos - 1].roomFacing != RoomFacing.Right)))
-                {
-                    numInvalidExits++;
-                }
-            }
-
-            // if there is a blocking room, we can't place this module
-            if (numInvalidExits > 0)
-            {
-                roomToPlace = null;
-            }
-        }
-
-        return roomToPlace;
-
-    } // end GetRoomWithFacing
-
-    /// <summary>
     /// Places the helm module into the ship layout at a random position always facing up as we can rotate the ship
     /// </summary>
     private void PlaceHelmModule()
@@ -411,6 +270,7 @@ public class ShipLayoutGenerator : MonoBehaviour
 
         // place the helm
         shipLayout[helmRowPos, helmColPos] = helm;
+        //DebugDrawModule(helm, helmRowPos, helmColPos);
 
         // remove the helm from the list of modules and log the helm as placed
         requiredShipModules.Remove(ModuleType.Helm);
@@ -455,6 +315,7 @@ public class ShipLayoutGenerator : MonoBehaviour
             if (foundPlacement)
             {
                 shipLayout[enginePos[0], enginePos[1]] = engineToPlace;
+                //DebugDrawModule(engineToPlace, enginePos[0], enginePos[1]);
 
                 // remove an engine from the list of modules and log it as placed
                 requiredShipModules.Remove(ModuleType.Engine);
@@ -603,6 +464,160 @@ public class ShipLayoutGenerator : MonoBehaviour
     } // end AddRoomToPlace
 
     /// <summary>
+    /// Gets the room to place if the room can be placed with appropriate facing
+    /// </summary>
+    /// <param name="moduleType">The the module type we are going to place</param>
+    /// <param name="currentRowPos">The current row position to place this module in the ship array</param>
+    /// <param name="currentColPos">The current column position to place this module in the ship array</param>
+    /// <returns></returns>
+    private RoomInfo GetRoomWithFacing(ModuleType moduleType, int currentRowPos, int currentColPos)
+    {
+        // assume everything is facing the direction of the helm for now and grab the room we want to place
+        RoomFacing currentFacing = RoomFacing.Up;
+        RoomInfo roomToPlace = roomsByModules[(int)moduleType][(int)currentFacing];
+
+        // some room modules must be external facing such as cannons, cloaking, engines, helm, missile bays, mine layer
+        //  - Cargo bays do not require external facing, however some will need it to put certain modules into them
+        //  - Helm was placed first and is not looked at here
+        //  - Engines must face the way the helm is facing - but are placed last and not looked at here
+        //  - All other external facing modules have walls on the exit that should face the outside
+        if (roomToPlace.externalFacing)
+        {
+            ExitDirection exitsAvailable = ExitDirection.None;
+            bool onEdge = false;
+
+            // if there are rooms around, make sure we are not putting a wall to them
+            // if we are in bounds, but not on the edge
+            if ((currentRowPos - 1) >= 0)
+            {
+                // if there isn't a module there, we can face that way
+                if (shipLayout[currentRowPos - 1, currentColPos] == null)
+                {
+                    exitsAvailable |= ExitDirection.Up;
+                }
+            }
+            // if we are on the edge, then just face that direction
+            else
+            {
+                currentFacing = RoomFacing.Up;
+                onEdge = true;
+            }
+
+            // Right - check only if we didn't come from there
+            if (!onEdge)
+            {
+                // if we are in bounds, but not on the edge
+                if ((currentColPos + 1) < shipWidth)
+                {
+                    // if there isn't a module there, we can face that way
+                    if (shipLayout[currentRowPos, currentColPos + 1] == null)
+                    {
+                        exitsAvailable |= ExitDirection.Right;
+                    }
+                }
+                // if we are on the edge, then just face that direction
+                else
+                {
+                    currentFacing = RoomFacing.Right;
+                    onEdge = true;
+                }
+            }
+
+            // Down - check only if we didn't come from there
+            if (!onEdge)
+            {
+                // if we are in bounds, but not on the edge
+                if ((currentRowPos + 1) < shipHeight)
+                {
+                    // if there isn't a module there, we can face that way
+                    if (shipLayout[currentRowPos + 1, currentColPos] == null)
+                    {
+                        exitsAvailable |= ExitDirection.Down;
+                    }
+                }
+                // if we are on the edge, then just face that direction
+                else
+                {
+                    currentFacing = RoomFacing.Down;
+                    onEdge = true;
+                }
+            }
+
+            // Left - check only if we didn't come from there
+            if (!onEdge)
+            {
+                // if we are in bounds, but not on the edge
+                if ((currentColPos - 1) >= 0)
+                {
+                    // if there isn't a module there, we can face that way
+                    if (shipLayout[currentRowPos, currentColPos - 1] == null)
+                    {
+                        exitsAvailable |= ExitDirection.Left;
+                    }
+                }
+                // if we are on the edge, then just face that direction
+                else
+                {
+                    currentFacing = RoomFacing.Left;
+                    onEdge = true;
+                }
+            }
+
+            // change the room direction if the room was on an edge 
+            if (onEdge)
+            {
+                roomToPlace = roomsByModules[(int)moduleType][(int)currentFacing];
+            }
+            // if there are exits available then face one of them
+            else if (exitsAvailable != ExitDirection.None)
+            {
+                // if there is an exit up, default to that
+                if (exitsAvailable.HasFlag(ExitDirection.Up))
+                {
+                    roomToPlace = roomsByModules[(int)moduleType][(int)RoomFacing.Up];
+                }
+                // next is right
+                else if (exitsAvailable.HasFlag(ExitDirection.Right))
+                {
+                    roomToPlace = roomsByModules[(int)moduleType][(int)RoomFacing.Right];
+                }
+                // then down
+                else if (exitsAvailable.HasFlag(ExitDirection.Down))
+                {
+                    roomToPlace = roomsByModules[(int)moduleType][(int)RoomFacing.Down];
+                }
+                // then left
+                else if (exitsAvailable.HasFlag(ExitDirection.Left))
+                {
+                    roomToPlace = roomsByModules[(int)moduleType][(int)RoomFacing.Left];
+                }
+                // this is here just in case, but it should not get here if there were no exits
+                else
+                {
+                    roomToPlace = null;
+                }
+            }
+            // if we get here and have a facing the same as the exit - then we can't place the room either
+            else
+            {
+                roomToPlace = null;
+            }
+        }
+
+        // the number of invalid exits (empty space is valid)
+        ExitDirection exitsBlocked = CheckExitsBlocked(currentRowPos, currentColPos);
+
+        // if there is a blocking room, we can't place this module
+        if (exitsBlocked != ExitDirection.None)
+        {
+            roomToPlace = null;
+        }
+
+        return roomToPlace;
+
+    } // end GetRoomWithFacing
+
+    /// <summary>
     /// Checks to see if placed room would obscure the helm module
     /// </summary>
     /// <param name="currentRowPos">The room row position attempting to be placed</param>
@@ -619,6 +634,72 @@ public class ShipLayoutGenerator : MonoBehaviour
 
         return helmObscured;
     }
+
+    /// <summary>
+    /// Goes through potential rooms and checks to see if it would be blocked
+    /// </summary>
+    /// <param name="currentRowPos">The ship layout row position to test</param>
+    /// <param name="currentColPos">The ship layout column positin to test</param>
+    /// <returns></returns>
+    public ExitDirection CheckExitsBlocked(int currentRowPos, int currentColPos)
+    {
+        ExitDirection exitsBlocked = ExitDirection.None;
+
+        // Up
+        // if we are in bounds, but not on the edge
+        if ((currentRowPos - 1) >= 0)
+        {
+            // if there ist a module there, it has external facing that is facing us, then exit is blocked
+            if ((shipLayout[currentRowPos - 1, currentColPos] != null) &&
+                (shipLayout[currentRowPos - 1, currentColPos].externalFacing &&
+                (shipLayout[currentRowPos - 1, currentColPos].roomFacing == RoomFacing.Down)))
+            {
+                exitsBlocked |= ExitDirection.Up;
+            }
+        }
+
+        // Right
+        // if we are in bounds, but not on the edge
+        if ((currentColPos + 1) < shipWidth)
+        {
+            // if there ist a module there, it has external facing that is facing us, then exit is blocked
+            if ((shipLayout[currentRowPos, currentColPos + 1] != null) &&
+                (shipLayout[currentRowPos, currentColPos + 1].externalFacing &&
+                (shipLayout[currentRowPos, currentColPos + 1].roomFacing == RoomFacing.Left)))
+            {
+                exitsBlocked |= ExitDirection.Right;
+            }
+        }
+
+        // Down
+        // if we are in bounds, but not on the edge
+        if ((currentRowPos + 1) < shipHeight)
+        {
+            // if there ist a module there, it has external facing that is facing us, then exit is blocked
+            if ((shipLayout[currentRowPos + 1, currentColPos] != null) &&
+                (shipLayout[currentRowPos + 1, currentColPos].externalFacing &&
+                (shipLayout[currentRowPos + 1, currentColPos].roomFacing == RoomFacing.Up)))
+            {
+                exitsBlocked |= ExitDirection.Down;
+            }
+        }
+
+        // Left
+        // if we are in bounds, but not on the edge
+        if ((currentColPos - 1) >= 0)
+        {
+            // if there ist a module there, it has external facing that is facing us, then exit is blocked
+            if ((shipLayout[currentRowPos, currentColPos - 1] != null) &&
+                (shipLayout[currentRowPos, currentColPos - 1].externalFacing &&
+                (shipLayout[currentRowPos, currentColPos - 1].roomFacing == RoomFacing.Right)))
+            {
+                exitsBlocked |= ExitDirection.Left;
+            }
+        }
+
+        return exitsBlocked;
+
+    } // end CheckExitsBlocked
 
     /// <summary>
     /// Sets up the requried rooms for the ship being genereated
@@ -754,4 +835,23 @@ public class ShipLayoutGenerator : MonoBehaviour
         Debug.Log(output);
 
     } // end LogRequiredModuleList
+
+    /*private void DebugDrawModule(RoomInfo room, int roomRow, int roomCol)
+    {
+        // only draw the module if debug is on
+        if (debugIsOn)
+        {
+            // calculate the world position for this room to send down
+
+            // as rooms can be offset from other rooms based on location in the ship, set the roomPos_z to the current row times the height of a room
+            float roomPos_z = 0 - (roomRow * RoomSpawner.ROOM_HEIGHT);
+
+            // as rooms can be offset from other rooms based on location in the ship, set the roomPos_x to the current col times the width of a room
+            float roomPos_x = 0 + (roomCol * RoomSpawner.ROOM_WIDTH);
+
+            // instantiates the room objects based on the strings in the arrays 
+            roomSpawner.BuildRoom(shipParentObject, room, roomPos_x, roomPos_z);
+        }
+
+    } // end DebugDrawModule*/
 }
