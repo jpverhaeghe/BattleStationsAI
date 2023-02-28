@@ -84,14 +84,18 @@ public class ShipManager : MonoBehaviour
         RedundantII, Valiant, Fearlight, TentacScout, XeloxianScout, SilicoidScout, CanosianScout, Starbase, 
     };
 
+    // private constant variables
+    private const float HELM_CENTER_OFFSET = 2.5f;
+
     // Serialized fields used by this script
+    //[SerializeField] Camera shipCamera;                                 // may be used to move the camera around
     [SerializeField] ShipLayoutGenerator shipLayoutGeneratorScript;     // a link to the ship layout generator to call when generate ship is pressed
     [SerializeField] TMP_Dropdown prebuiltShipList;                     // a list of the prebuilt ships
 
     // private variables used by this script
     private RoomSpawner roomSpawner;                                    // A refrence to the class roomSpawner    
-    private List<GameObject> shipObjects;                               // An empty gameObejct that stores all the spawned gameObjects to keep things clean and easy to find
-    private int currentShipID = 0;                                      // The current ship id
+    private GameObject shipObject;                                     // An empty gameObject that stores all the spawned gameObjects to keep things clean and easy to find
+    public Vector3 shipHelmPos;                                         // holds the helm player position for walking through the ship
 
     /// <summary>
     /// Initializes variables for this ship manager
@@ -99,7 +103,7 @@ public class ShipManager : MonoBehaviour
     private void Start()
     {
         // initialize the list of ships for accessing later
-        shipObjects = new List<GameObject>();
+        shipObject = null;
 
         // assigns the two RoomSpawner script for later use
         roomSpawner = gameObject.GetComponent<RoomSpawner>();
@@ -142,17 +146,24 @@ public class ShipManager : MonoBehaviour
     public void CreateShip(RoomInfo[,] ship, float xPos, float zPos)
     {
         // create a ship in the list to store the data in for later
-        GameObject shipObject = new GameObject("Ship" + currentShipID);
+        GameObject shipObject = new GameObject("Spawned Ship");
         shipObject.transform.position = new Vector3(xPos, 0, zPos);
-        shipObjects.Add(shipObject);
+        this.shipObject = shipObject;
 
         // build the ship
         BuildShip(ship, xPos, zPos);
 
-        // increase the number of ships instantiated
-        currentShipID++;
-
     } // end CreateShip
+
+    /// <summary>
+    /// Returns the ship helm coordinates
+    /// </summary>
+    /// <returns></returns>
+    public Vector3 GetShipHelmPos()
+    {
+        return shipHelmPos;
+
+    } // end GetShipHelmPos
 
     /// <summary>
     /// Build the ship using the room information and positional values in game
@@ -180,8 +191,14 @@ public class ShipManager : MonoBehaviour
                     // as rooms can be offset from other rooms based on location in the ship, set the roomPos_x to the current col times the width of a room
                     float roomPos_x = worldPos_x + (roomCol * RoomSpawner.ROOM_WIDTH);
 
+                    // if the room is the helm, then set up the helm position
+                    if (room.moduleType == ModuleType.Helm)
+                    {
+                        shipHelmPos = new Vector3(roomPos_x + HELM_CENTER_OFFSET, 0, roomPos_z - HELM_CENTER_OFFSET);
+                    }
+
                     // instantiates the room objects based on the strings in the arrays 
-                    roomSpawner.BuildRoom(shipObjects[currentShipID], room, roomPos_x, roomPos_z);
+                    roomSpawner.BuildRoom(shipObject, room, roomPos_x, roomPos_z);
                 }
             }
         }
@@ -194,12 +211,13 @@ public class ShipManager : MonoBehaviour
     private void ClearShip()
     {
         // for now remvoe the old ship (if there is one) as this method should only be called from the generate ship button
-        if (currentShipID > 0)
+        if (shipObject != null)
         {
-            GameObject currentShip = shipObjects[--currentShipID];
-            Destroy(currentShip);
-            shipObjects.RemoveAt(currentShipID);
+            Destroy(shipObject);
         }
+
+        shipHelmPos = new Vector3();
+
 
     } // end ClearShip
 
