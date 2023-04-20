@@ -1,4 +1,6 @@
 
+using System.Collections.Generic;
+
 public static class RoomData
 {   
     // The enumerated type for what types of rooms there are (for color coding)
@@ -510,5 +512,76 @@ public static class RoomData
          new RoomInfo[] {   TeleporterUpInfo,   TeleporterUpInfo,       TeleporterDownInfo,     TeleporterDownInfo},
          new RoomInfo[] {   EngineUpInfo,       EngineRightInfo,        EngineDownInfo,         EngineLeftInfo},
     };
+    
+    // Constant values used by this script - these are some of the default ships for comparisson
+    // Creates a layout for Redundant II (Hunan Scout) - Size 3 (9/3)
+    public static RoomInfo[,] RedundantII = {
+        {null,                  CannonUpInfo,           null},
+        {null,                  MissileBayRightInfo,    null},
+        {HelmUpInfo,            TeleporterUpInfo,       HyperdriveRightInfo},
+        {LifeSupportInfo,       null,                   ScienceRightInfo},
+        {EngineUpInfo,          null,                   EngineUpInfo},
+    };
 
+    // Creates layout for Valiant (Human Frigate) - Size 4 (12/3)
+    public static RoomInfo[,] Valiant = {
+        {null,                  null,                   HelmUpInfo,             null,                   null},
+        {null,                  null,                   LifeSupportInfo,        null,                   null},
+        {null,                  ScienceLeftInfo,        TeleporterUpInfo,       MissileBayRightInfo,    null},
+        {null,                  HyperdriveLeftInfo,     SickBayUpInfo,          LifeSupportInfo,        null},
+        {CannonLeftInfo,        EngineUpInfo,           null,                   EngineUpInfo,           CannonRightInfo},
+    };
+
+    // Creates the Fearlight (Tentac Scout) - Size 3 (9/3)
+    public static RoomInfo[,] Fearlight = {
+        {null,                  HelmUpInfo,             null},
+        {ScienceDownInfo,       TeleporterUpInfo,       CannonUpInfo},
+        {HyperdriveDownInfo,    null,                   MissileBayRightInfo},
+        {EngineUpInfo,          EngineUpInfo,           LifeSupportInfo},
+    };
+
+    // Creates the Claw - Size 3 (9/3)
+    public static RoomInfo[,] TentacScout = {
+        {null,                  ScienceUpInfo,          null},
+        {EngineRightInfo,       HyperdriveLeftInfo,     CannonUpInfo},
+        {EngineRightInfo,       null,                   MissileBayRightInfo},
+        {EngineRightInfo,       LifeSupportInfo,        HelmDownInfo},
+    };
+
+    // Create Xeloxian scout - Size 3 (9/3)
+    public static RoomInfo[,] XeloxianScout = {
+        {null,                  null,                   HelmUpInfo,             null,                   null},
+        {null,                  null,                   LifeSupportInfo,        null,                   null},
+        {CannonLeftInfo,        EngineUpInfo,           TeleporterUpInfo,       EngineUpInfo,           EngineUpInfo},
+        {null,                  null,                   HyperdriveRightInfo,    null,                   null},
+        {null,                  null,                   ScienceUpInfo,          null,                   null},
+    };
+
+    // Creates silicoid scout - Size 3 (10/3)
+    public static RoomInfo[,] SilicoidScout = {
+        {null,                  LifeSupportInfo,        null,                   HyperdriveRightInfo,    null},
+        {null,                  MissileBayLeftInfo,     HelmUpInfo,             ScienceUpInfo,          null},
+        {CannonLeftInfo,        EngineUpInfo,           null,                   EngineUpInfo,           EngineUpInfo},
+    };
+
+    // Creates a canosian scout - Size 3 (9/3)
+    public static RoomInfo[,] CanosianScout = {
+        {null,                  null,                   HelmUpInfo,             null,                   null},
+        {null,                  MissileBayUpInfo,       LifeSupportInfo,        ScienceLeftInfo,        null},
+        {CannonLeftInfo,        EngineUpInfo,           EngineUpInfo,           HyperdriveLeftInfo,     CargoBayInfo},
+    };
+
+    // Creates starbase layout - Size 3 (9/3)
+    public static RoomInfo[,] Starbase = {
+        {CannonUpInfo,          CargoBayInfo,           MissileBayRightInfo},
+        {LifeSupportInfo,       SickBayUpInfo,          ScienceUpInfo},
+        {EngineUpInfo,          EngineUpInfo,           EngineUpInfo},
+    };
+
+    // Creates the starbas layout facing to the right (probably can remove) - Size 3 (9/3)
+    public static RoomInfo[,] StarbaseR = {
+        {EngineRightInfo,       LifeSupportInfo,        CannonRightInfo},
+        {EngineRightInfo,       SickBayDownInfo,        CargoBayInfo},
+        {EngineRightInfo,       ScienceRightInfo,       MissileBayDownInfo},
+    };
 }

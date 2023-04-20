@@ -71,7 +71,7 @@ public class ShipLayoutGenerator : MonoBehaviour
     /// <summary>
     /// Start is called before the first frame update to set up variables, etc. for this script
     /// </summary>
-    void Start()
+    void Awake()
     {
         // set up the drop down list for the ship sizes used by this script
         PopulateDropDownWithEnum(shipSizes, shipSizeEnum);
