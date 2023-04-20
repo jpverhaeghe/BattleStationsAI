@@ -1,29 +1,30 @@
 ﻿using System.Collections;
 using System.Collections.Generic;
+using System.Linq;
 using TMPro;
 using UnityEngine;
 using static RoomData;
 
 public class ShipManager : MonoBehaviour
 {
-    // TODO: Probably need to make the ship a seperate class that is managed by this class.
-
     // private constant variables
     private const float HELM_CENTER_OFFSET = 2.5f;
 
     // public variables used by the ship manager for keeping track of the current ships state
-    public int shipSize;                                                // used to store the current generated ship size
+    /*public int shipSize;                                                // used to store the current generated ship size
     public int currentSpeed;                                            // the current speed of the ship
     public int outOfControlLevel;                                       // how out of control the ship is, affects bot skills
     public int helmEnergyLevel;                                         // the energy amount in the ships drive systems (turning, etc.)
     public int weaponEnergyLevel;                                       // the energy amount in the weapons systems
-    public int shieldEnergyLevel;                                       // the energy amount in the shields systems
+    public int shieldEnergyLevel;                                       // the energy amount in the shields systems*/
 
     // Serialized fields used by this script
     [Header("Ship Generation Elements")]
     [SerializeField] ShipLayoutGenerator shipLayoutGeneratorScript;     // a link to the ship layout generator to call when generate ship is pressed
     [SerializeField] TMP_Dropdown prebuiltShipList;                     // a list of the prebuilt ships
 
+    // TODO: Think of a way to re-use these for each ship as they go through the AI
+    // - perhaps update a text box with a name of the ship above them
     [Header("HUD Elements to keep track of ship data")]
     [SerializeField] TMP_Text shipSpeedText;
     [SerializeField] TMP_Text shipOutOfControlText;
@@ -33,10 +34,10 @@ public class ShipManager : MonoBehaviour
 
     // private variables used by this script
     private RoomSpawner roomSpawner;                                    // A refrence to the class roomSpawner    
-    private GameObject shipObject;                                      // Eempty gameObject that stores all the spawned gameObjects to keep things easy to find
-    private Vector3 shipHelmPos;                                        // holds the helm player position for walking through the ship
+    private List<GameObject> shipObjects;                               // GameObject list that stores all the spawned gameObjects to keep things easy to find
+    private int currentSpawnShipSize;                                   // A temporary variable to store the ship size until the object is created
 
-    
+
     //Is a list of the different ship options
     private List<RoomInfo[,]> shipList = new List<RoomInfo[,]>
     {
@@ -51,6 +52,9 @@ public class ShipManager : MonoBehaviour
         // assigns the RoomSpawner script for later use
         roomSpawner = gameObject.GetComponent<RoomSpawner>();
 
+        // create the list of ship game objects
+        shipObjects = new List<GameObject>();
+
     } // end Awake
 
     /// <summary>
@@ -63,15 +67,59 @@ public class ShipManager : MonoBehaviour
     } // end InitializeShip
 
     /// <summary>
+    /// Does the intial set up for the round in phase one for all ships
+    /// </summary>
+    public void DoPhase1Setup()
+    {
+        for (int i = 0; i < shipObjects.Count; i++)
+        {
+            GeneratedShip currentShip = shipObjects[i].GetComponent<GeneratedShip>();
+
+            // TODO: Energy levels can only go up if there is an engine working
+            // all energy levels must be at least 1 at the beginning of the round
+            if (currentShip.helmEnergyLevel < 1)
+            {
+                UpdateHelmEnergy(i, 1);
+            }
+
+            if (currentShip.weaponEnergyLevel < 1)
+            {
+                UpdateWeaponsEnergy(i, 1);
+            }
+
+            if (currentShip.shieldEnergyLevel < 1)
+            {
+                UpdateShieldEnergy(i, 1);
+            }
+        }
+
+    } // DoPhase1Setup
+
+    /// <summary>
+    /// The stead the ships part of a phase removes one OOC from each ship, so just go through the list
+    /// </summary>
+    public void SteadyShips()
+    {
+        for (int i = 0; i < shipObjects.Count; i++)
+        {
+            UpdateOutOfControl(i, -1);
+        }
+
+    } // SteadyShips
+
+    /// <summary>
     /// Performs the necessary adjustments for a ship at the end of the round
     /// </summary>
     public void ShipRoundCleanUp()
     {
-        // adjust the levels per the rules (all energy and speed are reduced by 1)
-        UpdateSpeed(-1);
-        UpdateHelmEnergy(-1);
-        UpdateWeaponsEnergy(-1);
-        UpdateShieldEnergy(-1);
+        for (int i = 0; i < shipObjects.Count; i++)
+        {
+            // adjust the levels per the rules (all energy and speed are reduced by 1)
+            UpdateSpeed(i, -1);
+            UpdateHelmEnergy(i, -1);
+            UpdateWeaponsEnergy(i, -1);
+            UpdateShieldEnergy(i, -1);
+        }
 
         // TODO: Remove counters on any modules (engineering, helm, weapons, etc.)
 
@@ -81,90 +129,128 @@ public class ShipManager : MonoBehaviour
     /// Updates the speed with to the new value, never less than zero
     /// TODO: When speed is over 4 - the ship should take damage
     /// </summary>
+    /// <param name="shipID">The index of the ship that is being adjusted in the list</param>
     /// <param name="speedChange">The value to change the speed by</param>
-    public void UpdateSpeed(int speedChange)
+    public void UpdateSpeed(int shipID, int speedChange)
     {
-        currentSpeed += speedChange;
-
-        // can't have a spped of less than zero
-        if (currentSpeed < 0)
+        // only adjust if the ship id is in the list, otherwise it is invalid
+        if ((shipID >= 0) && (shipID < shipObjects.Count))
         {
-            currentSpeed = 0;
-        }
+            shipObjects[shipID].GetComponent<GeneratedShip>().UpdateSpeed(speedChange);
 
-        shipSpeedText.text = "Speed = " + currentSpeed.ToString();
+            // update the HUD text if this is the hero ship (ship ID 0)
+            if (shipID == 0)
+            {
+                shipSpeedText.text = "Speed = " + shipObjects[shipID].GetComponent<GeneratedShip>().currentSpeed.ToString();
+            }
+        }
+        else
+        {
+            Debug.Log("ShipManager->UpdateShipSpeed: ShipID " + shipID + " does not exist");
+        }
 
     } // end UpdateSpeed
 
     /// <summary>
     /// Updates the Out of Control factor (OOC) with to the new value, never less than zero
     /// </summary>
+    /// <param name="shipID">The index of the ship that is being adjusted in the list</param>
     /// <param name="speedChange">The value to change the OOC by</param>
-    public void UpdateOutOfControl(int oocChange)
+    public void UpdateOutOfControl(int shipID, int oocChange)
     {
-        outOfControlLevel += oocChange;
-
-        // can't have a spped of less than zero
-        if (outOfControlLevel < 0)
+        // only adjust if the ship id is in the list, otherwise it is invalid
+        if ((shipID >= 0) && (shipID < shipObjects.Count))
         {
-            outOfControlLevel = 0;
-        }
+            shipObjects[shipID].GetComponent<GeneratedShip>().UpdateOutOfControl(oocChange);
 
-        shipOutOfControlText.text = "OOC = " + outOfControlLevel.ToString();
+            // update the HUD text if this is the hero ship (ship ID 0)
+            if (shipID == 0)
+            {
+                shipOutOfControlText.text = "OOC = " + shipObjects[shipID].GetComponent<GeneratedShip>().outOfControlLevel.ToString();
+            }
+        }
+        else
+        {
+            Debug.Log("ShipManager->UpdateOutOfControl: ShipID " + shipID + " does not exist");
+        }
 
     } // end UpdateOutOfControl
 
     /// <summary>
     /// Updates the helm energy level with to the new value, never less than zero
     /// </summary>
+    /// <param name="shipID">The index of the ship that is being adjusted in the list</param>
     /// <param name="helmEnergyChange">The value to change the helm energy by</param>
-    public void UpdateHelmEnergy(int helmEnergyChange)
+    public void UpdateHelmEnergy(int shipID, int helmEnergyChange)
     {
-        helmEnergyLevel += helmEnergyChange;
-
-        // can't have a spped of less than zero
-        if (helmEnergyLevel < 0)
+        // only adjust if the ship id is in the list, otherwise it is invalid
+        if ((shipID >= 0) && (shipID < shipObjects.Count))
         {
-            helmEnergyLevel = 0;
-        }
+            shipObjects[shipID].GetComponent<GeneratedShip>().UpdateHelmEnergy(helmEnergyChange);
 
-        shipHelmText.text = "Speed = " + helmEnergyLevel.ToString();
+            // update the HUD text if this is the hero ship (ship ID 0)
+            if (shipID == 0)
+            {
+
+                shipHelmText.text = "Helm = " + shipObjects[shipID].GetComponent<GeneratedShip>().helmEnergyLevel.ToString();
+            }
+        }
+        else
+        {
+            Debug.Log("ShipManager->UpdateHelmEnergy: ShipID " + shipID + " does not exist");
+        }
 
     } // end UpdateHelmEnergy
 
     /// <summary>
     /// Updates the weapons energy level with to the new value, never less than zero
     /// </summary>
+    /// <param name="shipID">The index of the ship that is being adjusted in the list</param>
     /// <param name="weaponsEnergyChange">The value to change the weapons energy by</param>
-    public void UpdateWeaponsEnergy(int weaponsEnergyChange)
+    public void UpdateWeaponsEnergy(int shipID, int weaponsEnergyChange)
     {
-        weaponEnergyLevel += weaponsEnergyChange;
-
-        // can't have a spped of less than zero
-        if (weaponEnergyLevel < 0)
+        // only adjust if the ship id is in the list, otherwise it is invalid
+        if ((shipID >= 0) && (shipID < shipObjects.Count))
         {
-            weaponEnergyLevel = 0;
-        }
+            shipObjects[shipID].GetComponent<GeneratedShip>().UpdateWeaponsEnergy(weaponsEnergyChange);
 
-        shipWeaponsText.text = "Weapons = " + weaponEnergyLevel.ToString();
+            // update the HUD text if this is the hero ship (ship ID 0)
+            if (shipID == 0)
+            {
+
+                shipWeaponsText.text = "Weapons = " + shipObjects[shipID].GetComponent<GeneratedShip>().weaponEnergyLevel.ToString();
+            }
+        }
+        else
+        {
+            Debug.Log("ShipManager->UpdateWeaponsEnergy: ShipID " + shipID + " does not exist");
+        }
 
     } // end UpdateWeaponsEnergy
 
     /// <summary>
     /// Updates the shield energy level with to the new value, never less than zero
     /// </summary>
+    /// <param name="shipID">The index of the ship that is being adjusted in the list</param>
     /// <param name="shieldEnergyChange">The value to </param>
-    public void UpdateShieldEnergy(int shieldEnergyChange)
+    public void UpdateShieldEnergy(int shipID, int shieldEnergyChange)
     {
-        shieldEnergyLevel += shieldEnergyChange;
-
-        // can't have a spped of less than zero
-        if (shieldEnergyLevel < 0)
+        // only adjust if the ship id is in the list, otherwise it is invalid
+        if ((shipID >= 0) && (shipID < shipObjects.Count))
         {
-            shieldEnergyLevel = 0;
-        }
+            shipObjects[shipID].GetComponent<GeneratedShip>().UpdateShieldEnergy(shieldEnergyChange);
 
-        shipShieldText.text = "Shields = " + shieldEnergyLevel.ToString();
+            // update the HUD text if this is the hero ship (ship ID 0)
+            if (shipID == 0)
+            {
+
+                shipShieldText.text = "Shields = " + shipObjects[shipID].GetComponent<GeneratedShip>().shieldEnergyLevel.ToString();
+            }
+        }
+        else
+        {
+            Debug.Log("ShipManager->UpdateShieldEnergy: ShipID " + shipID + " does not exist");
+        }
 
     } // end UpdateShieldEnergy
 
@@ -174,9 +260,12 @@ public class ShipManager : MonoBehaviour
     public void GenerateShip()
     {
         // for now remove the old ship (if there is one) as this method should only be called from the generate ship buttons
-        ClearShip();
+        for (int i = 0; i < shipObjects.Count; i++)
+        {
+            ClearShip(i);
+        }
 
-        // Get the room info layout and create the ship
+        // Get the room info layout and create the ship - for now only one ship is built
         RoomInfo[,] ship = shipLayoutGeneratorScript.GenerateShipLayout();
         CreateShip(ship, 0, 0);
 
@@ -188,7 +277,10 @@ public class ShipManager : MonoBehaviour
     public void CreateShip()
     {
         // for now remove the old ship (if there is one) as this method should only be called from the generate ship buttons
-        ClearShip();
+        for (int i = 0; i < shipObjects.Count; i++)
+        {
+            ClearShip(i);
+        }
 
         // choose one from the drop down
         int shipType = prebuiltShipList.value;              //Random.Range(0, shipList.Count);
@@ -204,35 +296,66 @@ public class ShipManager : MonoBehaviour
     public void CreateShip(RoomInfo[,] ship, float xPos, float zPos)
     {
         // create a ship in the list to store the data in for later
-        GameObject shipObject = new GameObject("Spawned Ship");
+        string shipObjectName = "EnemyShip";
+
+        // if this is the first ship, give it a unique name
+        if (shipObjects.Count == 0)
+        {
+            shipObjectName = "HeroShip";
+        }
+
+        GameObject shipObject = new GameObject(shipObjectName);
         shipObject.transform.position = new Vector3(xPos, 0, zPos);
-        this.shipObject = shipObject;
+
+        // add the ship component that keeps track of an individual ship status
+        shipObject.AddComponent<GeneratedShip>();
+
+        // as we add to the end, the id of the ship will be the current count
+        int shipID = shipObjects.Count;
+        shipObject.GetComponent<GeneratedShip>().shipID = shipID;
+
+        // store the ship size too
+        shipObject.GetComponent<GeneratedShip>().shipSize = currentSpawnShipSize;
+        this.shipObjects.Add(shipObject);
 
         // build the ship
-        BuildShip(ship, xPos, zPos);
+        BuildShip(shipID, ship, xPos, zPos);
 
     } // end CreateShip
 
     /// <summary>
     /// Returns the ship helm coordinates
     /// </summary>
-    /// <returns></returns>
-    public Vector3 GetShipHelmPos()
+    /// <param name="shipID">The id of the ship to access</param>
+    /// <returns>The vector 3 position of where to place a player in the helm</returns>
+    public Vector3 GetShipHelmPos(int shipID)
     {
-        return shipHelmPos;
+        return shipObjects[shipID].GetComponent<GeneratedShip>().shipHelmPos;
 
     } // end GetShipHelmPos
 
     /// <summary>
+    /// Sets the ship at the ID value in the list to the given size
+    /// </summary>
+    /// <param name="shipID"></param>
+    /// <param name="size"></param>
+    public void SetShipSize(int size)
+    {
+        currentSpawnShipSize = size;
+
+    } // end SetShipSize
+
+    /// <summary>
     /// Build the ship using the room information and positional values in game
     /// </summary>
+    /// <param name="shipID">The id of the ship in the ship objects list</param>
     /// <param name="ship">The ship as a room information layout array</param>
     /// <param name="worldPos_x">The x world position for the top left of the ship</param>
     /// <param name="worldPos_z">The z world position for the top left of the ship</param>
-    private void BuildShip(RoomInfo[,] ship, float worldPos_x, float worldPos_z)
+    private void BuildShip(int shipID, RoomInfo[,] ship, float worldPos_x, float worldPos_z)
     {
         // build the ship rooms based on the room layout
-        for (int roomRow = 0; roomRow < ship.GetLength(0); roomRow++) 
+        for (int roomRow = 0; roomRow < ship.GetLength(0); roomRow++)
         {
             for (int roomCol = 0; roomCol < ship.GetLength(1); roomCol++)
             {
@@ -252,11 +375,12 @@ public class ShipManager : MonoBehaviour
                     // if the room is the helm, then set up the helm position
                     if (room.moduleType == ModuleType.Helm)
                     {
-                        shipHelmPos = new Vector3(roomPos_x + HELM_CENTER_OFFSET, 0, roomPos_z - HELM_CENTER_OFFSET);
+                        shipObjects[shipID].GetComponent<GeneratedShip>().shipHelmPos = 
+                            new Vector3(roomPos_x + HELM_CENTER_OFFSET, 0, roomPos_z - HELM_CENTER_OFFSET);
                     }
 
                     // instantiates the room objects based on the strings in the arrays 
-                    roomSpawner.BuildRoom(shipObject, room, roomPos_x, roomPos_z);
+                    roomSpawner.BuildRoom(shipObjects[shipID], room, roomPos_x, roomPos_z);
                 }
             }
         }
@@ -266,16 +390,19 @@ public class ShipManager : MonoBehaviour
     /// <summary>
     /// for now remove the old ship (if there is one) as this method should only be called from the generate ship buttons
     /// </summary>
-    private void ClearShip()
+    private void ClearShip(int shipID)
     {
+        GameObject shipToRemove = shipObjects[shipID];
+
         // for now remvoe the old ship (if there is one) as this method should only be called from the generate ship button
-        if (shipObject != null)
+        if (shipToRemove != null)
         {
-            Destroy(shipObject);
+            // We can't remove the ship from the list as other ships rely on the placement in the list as an ID
+            // TODO: This is not very efficient and could cause issues - find a way to clean up the list as we remove
+            // - Is this necessary?? We won't have that many ships and when we load the level it should clear them anyway?
+            shipObjects[shipID] = null;
+            Destroy(shipToRemove);
         }
-
-        shipHelmPos = new Vector3();
-
 
     } // end ClearShip
 

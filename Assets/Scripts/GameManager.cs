@@ -96,7 +96,7 @@ public class GameManager : MonoBehaviour
         // Phase 1: if we are in phase 1, there is a little additional set up
         if (currentPhase == 1)
         {
-            DoPhase1Setup();
+            shipManager.DoPhase1Setup();
         }
 
         // TODO: Move ships based on current speeds and direction
@@ -110,7 +110,7 @@ public class GameManager : MonoBehaviour
         // TODO: Enemy Actions
 
         // Steady ship
-        shipManager.UpdateOutOfControl(-1);
+        shipManager.SteadyShips();
 
         // TODO: Deal with fire, gas and life support issues
 
@@ -119,30 +119,6 @@ public class GameManager : MonoBehaviour
         CheckEndRound();
 
     } // end DoPhases
-
-    /// <summary>
-    /// Does the intial set up for the round in phase one
-    /// </summary>
-    private void DoPhase1Setup()
-    {
-        // TODO: Energy levels can only go up if there is an engine working
-        // all energy levels must be at least 1 at the beginning of the round
-        if (shipManager.helmEnergyLevel < 1)
-        {
-            shipManager.UpdateHelmEnergy(1);
-        }
-
-        if (shipManager.weaponEnergyLevel < 1)
-        {
-            shipManager.UpdateWeaponsEnergy(1);
-        }
-
-        if (shipManager.shieldEnergyLevel < 1)
-        {
-            shipManager.UpdateShieldEnergy(1);
-        }
-
-    } // DoPhase1Setup
 
     /// <summary>
     /// Checks to see if the round has ended, and if so ends the round and sets up the next or increases to the next phase
@@ -171,8 +147,7 @@ public class GameManager : MonoBehaviour
     /// </summary>
     public void WalkThroughShip()
     {
-        Vector3 currentHelmPos = shipManager.GetShipHelmPos();
-
+        Vector3 currentHelmPos = shipManager.GetShipHelmPos(0);
 
         // if the transform is not at the origin, we are good to teleport to the ship
         if (currentHelmPos != new Vector3())
