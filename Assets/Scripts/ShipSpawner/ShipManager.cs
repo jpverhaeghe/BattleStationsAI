@@ -10,18 +10,11 @@ public class ShipManager : MonoBehaviour
     // private constant variables
     private const float HELM_CENTER_OFFSET = 2.5f;
 
-    // public variables used by the ship manager for keeping track of the current ships state
-    /*public int shipSize;                                                // used to store the current generated ship size
-    public int currentSpeed;                                            // the current speed of the ship
-    public int outOfControlLevel;                                       // how out of control the ship is, affects bot skills
-    public int helmEnergyLevel;                                         // the energy amount in the ships drive systems (turning, etc.)
-    public int weaponEnergyLevel;                                       // the energy amount in the weapons systems
-    public int shieldEnergyLevel;                                       // the energy amount in the shields systems*/
-
     // Serialized fields used by this script
     [Header("Ship Generation Elements")]
     [SerializeField] ShipLayoutGenerator shipLayoutGeneratorScript;     // a link to the ship layout generator to call when generate ship is pressed
     [SerializeField] TMP_Dropdown prebuiltShipList;                     // a list of the prebuilt ships
+    [SerializeField] public GameObject operationsBotPrefab;             // a link to an operations bot prefab for adding to a ship
 
     // TODO: Think of a way to re-use these for each ship as they go through the AI
     // - perhaps update a text box with a name of the ship above them
@@ -36,7 +29,6 @@ public class ShipManager : MonoBehaviour
     private RoomSpawner roomSpawner;                                    // A refrence to the class roomSpawner    
     private List<GameObject> shipObjects;                               // GameObject list that stores all the spawned gameObjects to keep things easy to find
     private int currentSpawnShipSize;                                   // A temporary variable to store the ship size until the object is created
-
 
     //Is a list of the different ship options
     private List<RoomInfo[,]> shipList = new List<RoomInfo[,]>
@@ -312,14 +304,11 @@ public class ShipManager : MonoBehaviour
 
         // as we add to the end, the id of the ship will be the current count
         int shipID = shipObjects.Count;
-        shipObject.GetComponent<GeneratedShip>().shipID = shipID;
-
-        // store the ship size too
-        shipObject.GetComponent<GeneratedShip>().shipSize = currentSpawnShipSize;
         this.shipObjects.Add(shipObject);
 
         // build the ship
-        BuildShip(shipID, ship, xPos, zPos);
+        Vector3 helmPos = BuildShip(shipID, ship, xPos, zPos);
+        shipObjects[shipID].GetComponent<GeneratedShip>().SetupShip(this, ship, shipID, currentSpawnShipSize, helmPos);
 
     } // end CreateShip
 
@@ -352,8 +341,12 @@ public class ShipManager : MonoBehaviour
     /// <param name="ship">The ship as a room information layout array</param>
     /// <param name="worldPos_x">The x world position for the top left of the ship</param>
     /// <param name="worldPos_z">The z world position for the top left of the ship</param>
-    private void BuildShip(int shipID, RoomInfo[,] ship, float worldPos_x, float worldPos_z)
+    /// <returns>A vector3 with the ship's helm coordinates</returns>
+    private Vector3 BuildShip(int shipID, RoomInfo[,] ship, float worldPos_x, float worldPos_z)
     {
+        Vector3 helmPos = new Vector3(0,0,0);
+        int numLifeSupports = 0;
+
         // build the ship rooms based on the room layout
         for (int roomRow = 0; roomRow < ship.GetLength(0); roomRow++)
         {
@@ -375,15 +368,26 @@ public class ShipManager : MonoBehaviour
                     // if the room is the helm, then set up the helm position
                     if (room.moduleType == ModuleType.Helm)
                     {
-                        shipObjects[shipID].GetComponent<GeneratedShip>().shipHelmPos = 
-                            new Vector3(roomPos_x + HELM_CENTER_OFFSET, 0, roomPos_z - HELM_CENTER_OFFSET);
+                        helmPos.x = roomPos_x + HELM_CENTER_OFFSET;
+                        helmPos.z = roomPos_z - HELM_CENTER_OFFSET;
                     }
 
                     // instantiates the room objects based on the strings in the arrays 
                     roomSpawner.BuildRoom(shipObjects[shipID], room, roomPos_x, roomPos_z);
+
+                    // add up the number of life supports so we can store it
+                    if (room.moduleType == ModuleType.LifeSupport)
+                    {
+                        numLifeSupports++;
+                    }
                 }
             }
         }
+
+        // store the number of life supports for later use by the ship
+        shipObjects[shipID].GetComponent<GeneratedShip>().numLifeSupports = numLifeSupports;
+
+        return helmPos;
 
     } // end BuildShip
 
