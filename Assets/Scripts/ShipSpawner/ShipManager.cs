@@ -6,19 +6,37 @@ using static RoomData;
 
 public class ShipManager : MonoBehaviour
 {
+    // TODO: Probably need to make the ship a seperate class that is managed by this class.
+
     // private constant variables
     private const float HELM_CENTER_OFFSET = 2.5f;
 
+    // public variables used by the ship manager for keeping track of the current ships state
+    public int shipSize;                                                // used to store the current generated ship size
+    public int currentSpeed;                                            // the current speed of the ship
+    public int outOfControlLevel;                                       // how out of control the ship is, affects bot skills
+    public int helmEnergyLevel;                                         // the energy amount in the ships drive systems (turning, etc.)
+    public int weaponEnergyLevel;                                       // the energy amount in the weapons systems
+    public int shieldEnergyLevel;                                       // the energy amount in the shields systems
+
     // Serialized fields used by this script
-    //[SerializeField] Camera shipCamera;                                 // may be used to move the camera around
+    [Header("Ship Generation Elements")]
     [SerializeField] ShipLayoutGenerator shipLayoutGeneratorScript;     // a link to the ship layout generator to call when generate ship is pressed
     [SerializeField] TMP_Dropdown prebuiltShipList;                     // a list of the prebuilt ships
 
+    [Header("HUD Elements to keep track of ship data")]
+    [SerializeField] TMP_Text shipSpeedText;
+    [SerializeField] TMP_Text shipOutOfControlText;
+    [SerializeField] TMP_Text shipHelmText;
+    [SerializeField] TMP_Text shipWeaponsText;
+    [SerializeField] TMP_Text shipShieldText;
+
     // private variables used by this script
     private RoomSpawner roomSpawner;                                    // A refrence to the class roomSpawner    
-    private GameObject shipObject;                                      // An empty gameObject that stores all the spawned gameObjects to keep things clean and easy to find
-    public Vector3 shipHelmPos;                                         // holds the helm player position for walking through the ship
+    private GameObject shipObject;                                      // Eempty gameObject that stores all the spawned gameObjects to keep things easy to find
+    private Vector3 shipHelmPos;                                        // holds the helm player position for walking through the ship
 
+    
     //Is a list of the different ship options
     private List<RoomInfo[,]> shipList = new List<RoomInfo[,]>
     {
@@ -28,17 +46,127 @@ public class ShipManager : MonoBehaviour
     /// <summary>
     /// Initializes variables for this ship manager
     /// </summary>
-    private void Start()
+    private void Awake()
     {
-        // initialize the list of ships for accessing later
-        shipObject = null;
-
-        // assigns the two RoomSpawner script for later use
+        // assigns the RoomSpawner script for later use
         roomSpawner = gameObject.GetComponent<RoomSpawner>();
 
+    } // end Awake
+
+    /// <summary>
+    /// Initialiazes the ship and the rounds
+    /// </summary>
+    public void InitializeShip()
+    {
         GenerateShip();
 
-    } // end Start
+    } // end InitializeShip
+
+    /// <summary>
+    /// Performs the necessary adjustments for a ship at the end of the round
+    /// </summary>
+    public void ShipRoundCleanUp()
+    {
+        // adjust the levels per the rules (all energy and speed are reduced by 1)
+        UpdateSpeed(-1);
+        UpdateHelmEnergy(-1);
+        UpdateWeaponsEnergy(-1);
+        UpdateShieldEnergy(-1);
+
+        // TODO: Remove counters on any modules (engineering, helm, weapons, etc.)
+
+    } // ShipRoundCleanUp
+
+    /// <summary>
+    /// Updates the speed with to the new value, never less than zero
+    /// TODO: When speed is over 4 - the ship should take damage
+    /// </summary>
+    /// <param name="speedChange">The value to change the speed by</param>
+    public void UpdateSpeed(int speedChange)
+    {
+        currentSpeed += speedChange;
+
+        // can't have a spped of less than zero
+        if (currentSpeed < 0)
+        {
+            currentSpeed = 0;
+        }
+
+        shipSpeedText.text = "Speed = " + currentSpeed.ToString();
+
+    } // end UpdateSpeed
+
+    /// <summary>
+    /// Updates the Out of Control factor (OOC) with to the new value, never less than zero
+    /// </summary>
+    /// <param name="speedChange">The value to change the OOC by</param>
+    public void UpdateOutOfControl(int oocChange)
+    {
+        outOfControlLevel += oocChange;
+
+        // can't have a spped of less than zero
+        if (outOfControlLevel < 0)
+        {
+            outOfControlLevel = 0;
+        }
+
+        shipOutOfControlText.text = "OOC = " + outOfControlLevel.ToString();
+
+    } // end UpdateOutOfControl
+
+    /// <summary>
+    /// Updates the helm energy level with to the new value, never less than zero
+    /// </summary>
+    /// <param name="helmEnergyChange">The value to change the helm energy by</param>
+    public void UpdateHelmEnergy(int helmEnergyChange)
+    {
+        helmEnergyLevel += helmEnergyChange;
+
+        // can't have a spped of less than zero
+        if (helmEnergyLevel < 0)
+        {
+            helmEnergyLevel = 0;
+        }
+
+        shipHelmText.text = "Speed = " + helmEnergyLevel.ToString();
+
+    } // end UpdateHelmEnergy
+
+    /// <summary>
+    /// Updates the weapons energy level with to the new value, never less than zero
+    /// </summary>
+    /// <param name="weaponsEnergyChange">The value to change the weapons energy by</param>
+    public void UpdateWeaponsEnergy(int weaponsEnergyChange)
+    {
+        weaponEnergyLevel += weaponsEnergyChange;
+
+        // can't have a spped of less than zero
+        if (weaponEnergyLevel < 0)
+        {
+            weaponEnergyLevel = 0;
+        }
+
+        shipWeaponsText.text = "Weapons = " + weaponEnergyLevel.ToString();
+
+    } // end UpdateWeaponsEnergy
+
+    /// <summary>
+    /// Updates the shield energy level with to the new value, never less than zero
+    /// </summary>
+    /// <param name="shieldEnergyChange">The value to </param>
+    public void UpdateShieldEnergy(int shieldEnergyChange)
+    {
+        shieldEnergyLevel += shieldEnergyChange;
+
+        // can't have a spped of less than zero
+        if (shieldEnergyLevel < 0)
+        {
+            shieldEnergyLevel = 0;
+        }
+
+        shipShieldText.text = "Shields = " + shieldEnergyLevel.ToString();
+
+    } // end UpdateShieldEnergy
 
     /// <summary>
     /// Generate a random ship at the origin of the scene

@@ -43,7 +43,7 @@ public class ShipLayoutGenerator : MonoBehaviour
     private static int LIFE_SUPPORT_SHIP_DIVISOR = 2;       // the number we divide the ship size by to determine the minimum number of life support rooms
 
     // Serialized fields used by this script
-    //[SerializeField] ShipManager shipManagerScript;
+    [SerializeField] ShipManager shipManagerScript;
     [SerializeField] TMP_Dropdown shipSizes;
 
     // private variables used by this script
@@ -54,7 +54,6 @@ public class ShipLayoutGenerator : MonoBehaviour
     RoomInfo[,] shipLayout;                                 // the array that will store the ship layout
     private int shipHeight;                                 // the height of the ship array
     private int shipWidth;                                  // the width of the ship array
-    private int shipSize;                                   // used to store the current generated ship size
     private int numEnginesNeeded;                           // keeps track of the number of engines needed by this craft as engines are placed after all other modules
 
     // module specific variables
@@ -744,14 +743,14 @@ public class ShipLayoutGenerator : MonoBehaviour
         requiredShipModules.Add(ModuleType.Science);
 
         // both engines and life support are based on ship size
-        numEnginesNeeded = shipSize / ENGINE_SHIP_DIVISOR;
+        numEnginesNeeded = shipManagerScript.shipSize / ENGINE_SHIP_DIVISOR;
 
         for (int i = 0; i < numEnginesNeeded; i++)
         {
             requiredShipModules.Add(ModuleType.Engine);
         }
 
-        int numLifeSupportNeeded = shipSize / LIFE_SUPPORT_SHIP_DIVISOR;
+        int numLifeSupportNeeded = shipManagerScript.shipSize / LIFE_SUPPORT_SHIP_DIVISOR;
 
         for (int i = 0; i < numLifeSupportNeeded; i++)
         {
@@ -769,7 +768,7 @@ public class ShipLayoutGenerator : MonoBehaviour
     {
         // need to randomize layout based on size (the double array to hold the modules) - start with true random
         // basing it on the maximum number of rooms in the ship - don't need to hit this, must be size * NUM_ROOMS_PER_SIZE rooms at a min
-        shipSize = shipSizes.value + MIN_SHIP_SIZE;
+        int shipSize = shipSizes.value + MIN_SHIP_SIZE;
         int maxNumRooms = (shipSize + 1) * NUM_ROOMS_PER_SIZE - 1;
 
         // We want a minimum number for the width and height (2 for now) and by dividing the maxNumRooms by 2 then adding one to get different size configurations
@@ -813,6 +812,8 @@ public class ShipLayoutGenerator : MonoBehaviour
 
         // reset the number of modules placed (a random value for the number to place based on the number of rooms)
         numModulesToPlace = Random.Range( (shipSize * NUM_ROOMS_PER_SIZE), (maxNumRooms + 1) );
+
+        shipManagerScript.shipSize = shipSize;
 
     } // end SetShipDimensions
 
