@@ -9,7 +9,7 @@ using static RoomData;
 public class ShipManager : MonoBehaviour
 {
     // private constant variables
-    private const float HELM_CENTER_OFFSET = 2.5f;
+    private const float HELM_CENTER_OFFSET = 3.5f;
 
     // Serialized fields used by this script
     [Header("Ship Generation Elements")]
