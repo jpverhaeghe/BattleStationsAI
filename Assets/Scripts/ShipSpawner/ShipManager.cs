@@ -12,6 +12,7 @@ public class ShipManager : MonoBehaviour
 
     // Serialized fields used by this script
     [Header("Ship Generation Elements")]
+    [SerializeField] GameManager gameManager;
     [SerializeField] ShipLayoutGenerator shipLayoutGeneratorScript;     // a link to the ship layout generator to call when generate ship is pressed
     [SerializeField] TMP_Dropdown prebuiltShipList;                     // a list of the prebuilt ships
     [SerializeField] public GameObject[] botPrefabs;                    // a link to an the bot prefabs for adding to a ship
@@ -55,6 +56,7 @@ public class ShipManager : MonoBehaviour
     public void InitializeShip()
     {
         GenerateShip();
+        //GenerateShip(ShipLayoutGenerator.ShipSize.Frigate);
 
     } // end InitializeShip
 
@@ -250,15 +252,13 @@ public class ShipManager : MonoBehaviour
     /// Generate a random ship at the origin of the scene
     /// </summary>
     public void GenerateShip()
+    //public void GenerateShip(ShipLayoutGenerator.ShipSize shipType)
     {
-        // for now remove the old ship (if there is one) as this method should only be called from the generate ship buttons
-        for (int i = 0; i < shipObjects.Count; i++)
-        {
-            ClearShip(i);
-        }
+        ClearShips();
 
         // Get the room info layout and create the ship - for now only one ship is built
         RoomInfo[,] ship = shipLayoutGeneratorScript.GenerateShipLayout();
+        //RoomInfo[,] ship = shipLayoutGeneratorScript.GenerateShipLayout(shipType);
         CreateShip(ship, 0, 0);
 
     } // end GenerateShip
@@ -268,11 +268,7 @@ public class ShipManager : MonoBehaviour
     /// </summary>
     public void CreateShip()
     {
-        // for now remove the old ship (if there is one) as this method should only be called from the generate ship buttons
-        for (int i = 0; i < shipObjects.Count; i++)
-        {
-            ClearShip(i);
-        }
+        ClearShips();
 
         // choose one from the drop down
         int shipType = prebuiltShipList.value;              //Random.Range(0, shipList.Count);
@@ -309,6 +305,9 @@ public class ShipManager : MonoBehaviour
         // build the ship
         Vector3 helmPos = BuildShip(shipID, ship, xPos, zPos);
         shipObjects[shipID].GetComponent<GeneratedShip>().SetupShip(this, ship, shipID, currentSpawnShipSize, helmPos);
+
+        // if the ship ID is zero, set the camera to follow the bots on that ship
+        gameManager.SetShipCamera();
 
     } // end CreateShip
 
@@ -401,6 +400,22 @@ public class ShipManager : MonoBehaviour
         return helmPos;
 
     } // end BuildShip
+
+    /// <summary>
+    /// Removes all current ships this manager is dealing with
+    /// </summary>
+    private void ClearShips()
+    {
+        // for now remove the old ships (if there are any) as this method should only be called from the generate ship buttons
+        for (int i = 0; i < shipObjects.Count; i++)
+        {
+            ClearShip(i);
+        }
+
+        // clear out the ship list as well
+        shipObjects.Clear();
+
+    } // end ClearShip
 
     /// <summary>
     /// for now remove the old ship (if there is one) as this method should only be called from the generate ship buttons

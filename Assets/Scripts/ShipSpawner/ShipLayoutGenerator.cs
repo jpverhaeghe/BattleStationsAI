@@ -37,10 +37,11 @@ public class ShipLayoutGenerator : MonoBehaviour
     }
 
     // constant variables for this script
-    public static int MIN_SHIP_SIZE = 2;                    // ship offset for the enum
-    public static int NUM_ROOMS_PER_SIZE = 3;               // the number of rooms per ship size (minimum)
-    private static int ENGINE_SHIP_DIVISOR = 2;             // the number we divide the ship size by to determine the minimum number of engines
-    private static int LIFE_SUPPORT_SHIP_DIVISOR = 2;       // the number we divide the ship size by to determine the minimum number of life support rooms
+    public const int MIN_SHIP_SIZE = 2;                    // ship offset for the enum
+    public const int NUM_ROOMS_PER_SIZE = 3;               // the number of rooms per ship size (minimum)
+    private const int ENGINE_SHIP_DIVISOR = 2;             // the number we divide the ship size by to determine the minimum number of engines
+    private const int LIFE_SUPPORT_SHIP_DIVISOR = 2;       // the number we divide the ship size by to determine the minimum number of life support rooms
+    private const float CHANCE_FOR_MISSILE = 0.3f;         // the current chance for a missile bay over a cannon as a required module (one weapon min)
 
     // Serialized fields used by this script
     [SerializeField] ShipManager shipManagerScript;
@@ -62,11 +63,6 @@ public class ShipLayoutGenerator : MonoBehaviour
     private int helmRowPos;                                 // the position of the helm so we can make sure not to put modules in front of it
     private int helmColPos;                                 // the position of the helm so we can make sure not to put modules in front of it
 
-    // Debug variables to make it easier to debug this code visually
-    //private RoomSpawner roomSpawner;                        // for testing purposes so we can see the ship being created room by room
-    //private GameObject shipParentObject;                    // to attach the rooms to
-    //public bool debugIsOn;
-
     /// <summary>
     /// Start is called before the first frame update to set up variables, etc. for this script
     /// </summary>
@@ -80,39 +76,16 @@ public class ShipLayoutGenerator : MonoBehaviour
         placedShipModules = new List<ModuleType>();
         roomsToFill = new Queue<PotentialRoomPos>();
 
-        // debug code
-        //roomSpawner = GameObject.Find("ShipManager").GetComponent<RoomSpawner>();
-
     } // end Start
-
-    /// <summary>
-    /// Turns the debug mode on
-    /// </summary>
-    /*public void ToggleDebug()
-    {
-        debugIsOn = !debugIsOn;
-    }*/
 
     /// <summary>
     /// Generates a ship layout based on data from the UI - such as the size drop down
     /// </summary>
     /// <param name="shipID">The id of the ship being generated</param>
     /// <returns>RoomInfo[,] - the generated layout in a double array format of RoomInfo</returns>
-    //public RoomInfo[,] GenerateShipLayout()
     public RoomInfo[,] GenerateShipLayout()
+    //public RoomInfo[,] GenerateShipLayout(ShipSize shipType)
     {
-        // debug code
-        /*if (debugIsOn)
-        {
-            if (shipParentObject != null)
-            {
-                Destroy(shipParentObject);
-            }
-
-            // create a ship in the list to store the data in for later
-            shipParentObject = new GameObject("Ship");
-            shipParentObject.transform.position = new Vector3(0, 0, 0);
-        }*/
 
         // TODO: Add race as an option so we can change building based on the rules of each race
         //       For example: Tentac - External modules ignore facing restrictions and have 360 degree firing arc.
@@ -124,6 +97,7 @@ public class ShipLayoutGenerator : MonoBehaviour
 
         // set up the ship dimensions
         int shipSize = SetShipDimensions();
+        //int shipSize = SetShipDimensions(shipType);
         shipManagerScript.SetShipSize(shipSize);
 
         // create a list of the modules that must be in the ship - will remove from this list if a module of that type is placed
@@ -146,17 +120,8 @@ public class ShipLayoutGenerator : MonoBehaviour
         {
             LogRequiredModuleList();
             GenerateShipLayout();
-            //GenerateShipLayout(debug);
+            //GenerateShipLayout(shipType);
         }
-
-        // if debug mode is on, clean up as we leave
-        /*if (debugIsOn)
-        {
-            if (shipParentObject != null)
-            {
-                Destroy(shipParentObject);
-            }
-        }*/
 
         // return the layout generated
         return shipLayout;
@@ -739,6 +704,7 @@ public class ShipLayoutGenerator : MonoBehaviour
         //  - Life Support, where there is 1 for every 4 crew members - base this on size
         //  - Science Bay
         //  - Hyperdrive
+        //  - Adding a weapon for the AI bots to have something to fire with - only doing ship to ship combat for now
 
         // add a helm, science and hyperdrive as you only need one
         requiredShipModules.Add(ModuleType.Helm);
@@ -760,19 +726,32 @@ public class ShipLayoutGenerator : MonoBehaviour
             requiredShipModules.Add(ModuleType.LifeSupport);
         }
 
+        // randomize between Missile and Cannon
+        if (Random.Range(0, 1.0f) < CHANCE_FOR_MISSILE)
+        {
+            requiredShipModules.Add(ModuleType.MissileBay);
+        }
+        else
+        {
+            requiredShipModules.Add(ModuleType.Cannon);
+        }
+
         //LogRequiredModuleList();
 
     } // end SetRequiredRooms
 
     /// <summary>
     /// Randomizes the ship dimensions based on the size and number of rooms the ship can have
+    /// For now I've overridden the drop down generation and am taking in the size instead
     /// </summary>
     /// <returns>the ship size</returns>
     private int SetShipDimensions()
+    //private int SetShipDimensions(ShipSize shipType)
     {
         // need to randomize layout based on size (the double array to hold the modules) - start with true random
         // basing it on the maximum number of rooms in the ship - don't need to hit this, must be size * NUM_ROOMS_PER_SIZE rooms at a min
         int shipSize = shipSizes.value + MIN_SHIP_SIZE;
+        //int shipSize = (int)shipType + MIN_SHIP_SIZE;
         int maxNumRooms = (shipSize + 1) * NUM_ROOMS_PER_SIZE - 1;
 
         // We want a minimum number for the width and height (2 for now) and by dividing the maxNumRooms by 2 then adding one to get different size configurations

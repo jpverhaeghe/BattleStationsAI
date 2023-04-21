@@ -3017,6 +3017,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: b00ec9d8b3f819f46a2c6e7549c74826, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
+  gameManager: {fileID: 180385506}
   shipLayoutGeneratorScript: {fileID: 1026004046}
   prebuiltShipList: {fileID: 107120469}
   botPrefabs:
@@ -4194,7 +4195,7 @@ GameObject:
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
-  m_IsActive: 0
+  m_IsActive: 1
 --- !u!224 &1577823314
 RectTransform:
   m_ObjectHideFlags: 0

@@ -25,14 +25,14 @@ public static class RoomData
     {
         Cannon,
         CargoBay,
-        Cloak,
+        //Cloak,                  // removing for AI for now - keeping things simple
         Hyperdrive,
         LifeSupport,
-        MineLayer,
+        //MineLayer,              // removing for AI for now - keeping things simple
         MissileBay,
         Science,
-        SickBay,
-        Teleporter,
+        //SickBay,                // removing for AI - bots don't need a med bay
+        //Teleporter,             // removing for AI for now - no boarding AI yet
         Engine,                 // placed here so it can be ignored for normal module placement
         Helm                    // placed here so it can be ignored for normal module placement
     }
@@ -453,10 +453,10 @@ public static class RoomData
 
     public static RoomInfo CargoBayInfo         = new RoomInfo("Cargo Bay Up",      RoomType.Operations,    RoomFacing.Up,          ModuleType.CargoBay,    CargoBay,           false);
 
-    public static RoomInfo CloakUpInfo          = new RoomInfo("Cloak Up",          RoomType.Science,       RoomFacing.Up,          ModuleType.Cloak,       CloakUp,            true);
-    public static RoomInfo CloakRightInfo       = new RoomInfo("Cloak Right",       RoomType.Science,       RoomFacing.Right,       ModuleType.Cloak,       CloakRight,         true);
-    public static RoomInfo CloakDownInfo        = new RoomInfo("Cloak Down",        RoomType.Science,       RoomFacing.Down,        ModuleType.Cloak,       CloakDown,          true);
-    public static RoomInfo CloakLeftInfo        = new RoomInfo("Cloak Left",        RoomType.Science,       RoomFacing.Left,        ModuleType.Cloak,       CloakLeft,          true);
+    //public static RoomInfo CloakUpInfo          = new RoomInfo("Cloak Up",          RoomType.Science,       RoomFacing.Up,          ModuleType.Cloak,       CloakUp,            true);
+    //public static RoomInfo CloakRightInfo       = new RoomInfo("Cloak Right",       RoomType.Science,       RoomFacing.Right,       ModuleType.Cloak,       CloakRight,         true);
+    //public static RoomInfo CloakDownInfo        = new RoomInfo("Cloak Down",        RoomType.Science,       RoomFacing.Down,        ModuleType.Cloak,       CloakDown,          true);
+    //public static RoomInfo CloakLeftInfo        = new RoomInfo("Cloak Left",        RoomType.Science,       RoomFacing.Left,        ModuleType.Cloak,       CloakLeft,          true);
 
     public static RoomInfo HyperdriveUpInfo     = new RoomInfo("Hyperdrive Up",     RoomType.Science,       RoomFacing.Up,          ModuleType.Hyperdrive,  HyperdriveUp,       false);
     public static RoomInfo HyperdriveRightInfo  = new RoomInfo("Hyperdrive Right",  RoomType.Science,       RoomFacing.Right,       ModuleType.Hyperdrive,  HyperdriveRight,    false);
@@ -465,10 +465,10 @@ public static class RoomData
 
     public static RoomInfo LifeSupportInfo      = new RoomInfo("Life Support Up",   RoomType.Operations,    RoomFacing.Up,          ModuleType.LifeSupport, LifeSupport,        false);
 
-    public static RoomInfo MineLayerUpInfo      = new RoomInfo("Mine Layer Up",     RoomType.Engineering,   RoomFacing.Up,          ModuleType.MineLayer,   MineLayerUp,        true);
-    public static RoomInfo MineLayerRightInfo   = new RoomInfo("Mine Layer Right",  RoomType.Engineering,   RoomFacing.Right,       ModuleType.MineLayer,   MineLayerRight,     true);
-    public static RoomInfo MineLayerDownInfo    = new RoomInfo("Mine Layer Down",   RoomType.Engineering,   RoomFacing.Down,        ModuleType.MineLayer,   MineLayerDown,      true);
-    public static RoomInfo MineLayerLeftInfo    = new RoomInfo("Mine Layer Left",   RoomType.Engineering,   RoomFacing.Left,        ModuleType.MineLayer,   MineLayerLeft,      true);
+    //public static RoomInfo MineLayerUpInfo      = new RoomInfo("Mine Layer Up",     RoomType.Engineering,   RoomFacing.Up,          ModuleType.MineLayer,   MineLayerUp,        true);
+    //public static RoomInfo MineLayerRightInfo   = new RoomInfo("Mine Layer Right",  RoomType.Engineering,   RoomFacing.Right,       ModuleType.MineLayer,   MineLayerRight,     true);
+    //public static RoomInfo MineLayerDownInfo    = new RoomInfo("Mine Layer Down",   RoomType.Engineering,   RoomFacing.Down,        ModuleType.MineLayer,   MineLayerDown,      true);
+    //public static RoomInfo MineLayerLeftInfo    = new RoomInfo("Mine Layer Left",   RoomType.Engineering,   RoomFacing.Left,        ModuleType.MineLayer,   MineLayerLeft,      true);
 
     public static RoomInfo MissileBayUpInfo     = new RoomInfo("Missile Bay Up",    RoomType.Weapons,       RoomFacing.Up,          ModuleType.MissileBay,  MissileBayUp,       true);
     public static RoomInfo MissileBayRightInfo  = new RoomInfo("Missile Bay Right", RoomType.Weapons,       RoomFacing.Right,       ModuleType.MissileBay,  MissileBayRight,    true);
@@ -480,11 +480,11 @@ public static class RoomData
     public static RoomInfo ScienceDownInfo      = new RoomInfo("Science Down",      RoomType.Science,       RoomFacing.Down,        ModuleType.Science,     ScienceDown,        true);
     public static RoomInfo ScienceLeftInfo      = new RoomInfo("Science Left",      RoomType.Science,       RoomFacing.Left,        ModuleType.Science,     ScienceLeft,        true);
 
-    public static RoomInfo SickBayUpInfo        = new RoomInfo("Sick Bay Up",       RoomType.Science,       RoomFacing.Up,          ModuleType.SickBay,     SickBayUp,          false);
-    public static RoomInfo SickBayDownInfo      = new RoomInfo("Sick Bay Down",     RoomType.Science,       RoomFacing.Down,        ModuleType.SickBay,     SickBayDown,        false);
+    //public static RoomInfo SickBayUpInfo        = new RoomInfo("Sick Bay Up",       RoomType.Science,       RoomFacing.Up,          ModuleType.SickBay,     SickBayUp,          false);
+    //public static RoomInfo SickBayDownInfo      = new RoomInfo("Sick Bay Down",     RoomType.Science,       RoomFacing.Down,        ModuleType.SickBay,     SickBayDown,        false);
 
-    public static RoomInfo TeleporterUpInfo     = new RoomInfo("Teleporter Up",     RoomType.Science,       RoomFacing.Up,          ModuleType.Teleporter,  TeleporterUp,       false);
-    public static RoomInfo TeleporterDownInfo   = new RoomInfo("Teleporter Down",   RoomType.Science,       RoomFacing.Down,        ModuleType.Teleporter,  TeleporterDown,     false);
+    //public static RoomInfo TeleporterUpInfo     = new RoomInfo("Teleporter Up",     RoomType.Science,       RoomFacing.Up,          ModuleType.Teleporter,  TeleporterUp,       false);
+    //public static RoomInfo TeleporterDownInfo   = new RoomInfo("Teleporter Down",   RoomType.Science,       RoomFacing.Down,        ModuleType.Teleporter,  TeleporterDown,     false);
 
     public static RoomInfo EngineUpInfo         = new RoomInfo("Engine Up",         RoomType.Engineering,   RoomFacing.Up,          ModuleType.Engine,      EngineUp,           true);
     public static RoomInfo EngineRightInfo      = new RoomInfo("Engine Right",      RoomType.Engineering,   RoomFacing.Right,       ModuleType.Engine,      EngineRight,        true);
@@ -502,14 +502,14 @@ public static class RoomData
     {
          new RoomInfo[] {   CannonUpInfo,       CannonRightInfo,        CannonDownInfo,         CannonLeftInfo},
          new RoomInfo[] {   CargoBayInfo,       CargoBayInfo,           CargoBayInfo,           CargoBayInfo},
-         new RoomInfo[] {   CloakUpInfo,        CloakRightInfo,         CloakDownInfo,          CloakLeftInfo},
+         //new RoomInfo[] {   CloakUpInfo,        CloakRightInfo,         CloakDownInfo,          CloakLeftInfo},
          new RoomInfo[] {   HyperdriveUpInfo,   HyperdriveRightInfo,    HyperdriveDownInfo,     HyperdriveLeftInfo},
          new RoomInfo[] {   LifeSupportInfo,    LifeSupportInfo,        LifeSupportInfo,        LifeSupportInfo},
-         new RoomInfo[] {   MineLayerUpInfo,    MineLayerRightInfo,     MineLayerDownInfo,      MineLayerLeftInfo},
+         //new RoomInfo[] {   MineLayerUpInfo,    MineLayerRightInfo,     MineLayerDownInfo,      MineLayerLeftInfo},
          new RoomInfo[] {   MissileBayUpInfo,   MissileBayRightInfo,    MissileBayDownInfo,     MissileBayLeftInfo},
          new RoomInfo[] {   ScienceUpInfo,      ScienceRightInfo,       ScienceDownInfo,        ScienceLeftInfo},
-         new RoomInfo[] {   SickBayUpInfo,      SickBayUpInfo,          SickBayDownInfo,        SickBayDownInfo},
-         new RoomInfo[] {   TeleporterUpInfo,   TeleporterUpInfo,       TeleporterDownInfo,     TeleporterDownInfo},
+         //new RoomInfo[] {   SickBayUpInfo,      SickBayUpInfo,          SickBayDownInfo,        SickBayDownInfo},
+         //new RoomInfo[] {   TeleporterUpInfo,   TeleporterUpInfo,       TeleporterDownInfo,     TeleporterDownInfo},
          new RoomInfo[] {   EngineUpInfo,       EngineRightInfo,        EngineDownInfo,         EngineLeftInfo},
     };
     
@@ -518,7 +518,8 @@ public static class RoomData
     public static RoomInfo[,] RedundantII = {
         {null,                  CannonUpInfo,           null},
         {null,                  MissileBayRightInfo,    null},
-        {HelmUpInfo,            TeleporterUpInfo,       HyperdriveRightInfo},
+        //{HelmUpInfo,            TeleporterUpInfo,       HyperdriveRightInfo},
+        {HelmUpInfo,            CargoBayInfo,           HyperdriveRightInfo},
         {LifeSupportInfo,       null,                   ScienceRightInfo},
         {EngineUpInfo,          null,                   EngineUpInfo},
     };
@@ -527,15 +528,18 @@ public static class RoomData
     public static RoomInfo[,] Valiant = {
         {null,                  null,                   HelmUpInfo,             null,                   null},
         {null,                  null,                   LifeSupportInfo,        null,                   null},
-        {null,                  ScienceLeftInfo,        TeleporterUpInfo,       MissileBayRightInfo,    null},
-        {null,                  HyperdriveLeftInfo,     SickBayUpInfo,          LifeSupportInfo,        null},
+        //{null,                  ScienceLeftInfo,        TeleporterUpInfo,       MissileBayRightInfo,    null},
+        {null,                  ScienceLeftInfo,        CargoBayInfo,           MissileBayRightInfo,    null},
+        //{null,                  HyperdriveLeftInfo,     SickBayUpInfo,          LifeSupportInfo,        null},
+        {null,                  HyperdriveLeftInfo,     CargoBayInfo,           LifeSupportInfo,        null},
         {CannonLeftInfo,        EngineUpInfo,           null,                   EngineUpInfo,           CannonRightInfo},
     };
 
     // Creates the Fearlight (Tentac Scout) - Size 3 (9/3)
     public static RoomInfo[,] Fearlight = {
         {null,                  HelmUpInfo,             null},
-        {ScienceDownInfo,       TeleporterUpInfo,       CannonUpInfo},
+        //{ScienceDownInfo,       TeleporterUpInfo,       CannonUpInfo},
+        {ScienceDownInfo,       CargoBayInfo,           CannonUpInfo},
         {HyperdriveDownInfo,    null,                   MissileBayRightInfo},
         {EngineUpInfo,          EngineUpInfo,           LifeSupportInfo},
     };
@@ -552,7 +556,8 @@ public static class RoomData
     public static RoomInfo[,] XeloxianScout = {
         {null,                  null,                   HelmUpInfo,             null,                   null},
         {null,                  null,                   LifeSupportInfo,        null,                   null},
-        {CannonLeftInfo,        EngineUpInfo,           TeleporterUpInfo,       EngineUpInfo,           EngineUpInfo},
+        //{CannonLeftInfo,        EngineUpInfo,           TeleporterUpInfo,       EngineUpInfo,           EngineUpInfo},
+        {CannonLeftInfo,        EngineUpInfo,           CargoBayInfo,           EngineUpInfo,           EngineUpInfo},
         {null,                  null,                   HyperdriveRightInfo,    null,                   null},
         {null,                  null,                   ScienceUpInfo,          null,                   null},
     };
@@ -574,14 +579,16 @@ public static class RoomData
     // Creates starbase layout - Size 3 (9/3)
     public static RoomInfo[,] Starbase = {
         {CannonUpInfo,          CargoBayInfo,           MissileBayRightInfo},
-        {LifeSupportInfo,       SickBayUpInfo,          ScienceUpInfo},
+        //{LifeSupportInfo,       SickBayUpInfo,          ScienceUpInfo},
+        {LifeSupportInfo,       CargoBayInfo,           ScienceUpInfo},
         {EngineUpInfo,          EngineUpInfo,           EngineUpInfo},
     };
 
     // Creates the starbas layout facing to the right (probably can remove) - Size 3 (9/3)
     public static RoomInfo[,] StarbaseR = {
         {EngineRightInfo,       LifeSupportInfo,        CannonRightInfo},
-        {EngineRightInfo,       SickBayDownInfo,        CargoBayInfo},
+        //{EngineRightInfo,       SickBayDownInfo,        CargoBayInfo},
+        {EngineRightInfo,       CargoBayInfo,           CargoBayInfo},
         {EngineRightInfo,       ScienceRightInfo,       MissileBayDownInfo},
     };
 }

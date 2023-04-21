@@ -181,6 +181,9 @@ public class GeneratedShip : MonoBehaviour
         bot.GetComponent<GenericBot>().SetShip(this);
         bots.Add(bot);
 
+        // set the bot parent to the ship game object so it is easier to find the crew
+        bot.transform.SetParent(this.gameObject.transform);
+
         // set the value of the bot to follow by default on this ship, should be command to start
         currentBotBeingFollowed = 0;
 

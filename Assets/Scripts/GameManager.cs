@@ -33,7 +33,6 @@ public class GameManager : MonoBehaviour
     void Start()
     {
         StartGame();
-        SetShipCamera();
 
     } // end Start
 
