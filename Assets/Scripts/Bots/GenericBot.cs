@@ -28,7 +28,9 @@ public class GenericBot : MonoBehaviour
     protected int piloting;                                         // used for combat - command officer profession
     protected int science;                                          // used for combat - science officer profession
 
-    // private variables - should this be a parent class?
+    protected int moveSpeed = 4;                                    // the amount of squares a bot can move - same for all bots
+
+    // private variables
 
     /// <summary>
     /// Start is called before the first frame update

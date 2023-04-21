@@ -1,3 +1,4 @@
+using AlanZucconi.AI.PF;
 using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
@@ -10,6 +11,7 @@ public class GeneratedShip : MonoBehaviour
 
     // public variables used by the ship manager for keeping track of the current ships state
     public RoomInfo[,] shipLayout;                      // the ship layout using room types
+    public Grid2D shipPathingSystem;                    // the grid for the pathing system used by bots for this ship
     public Vector3 shipHelmPos;                         // holds the helm player position for walking through the ship
     public int shipID;                                  // the id of the ship
     public int shipSize;                                // used to store the current generated ship size

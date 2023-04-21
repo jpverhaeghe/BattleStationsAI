@@ -37,9 +37,11 @@ public class RoomSpawner : MonoBehaviour
     /// </summary>
     /// <param name="parentShipObject">The parent object to attach the room to</param>
     /// <param name="room">The array that has the tile information for this room</param>
-    /// <param name="roomPos_x">the world position tilePos_x for the ship</param>
-    /// <param name="roomPos_z">the world position tilePos_z for the ship</param>
-    public void BuildRoom(GameObject parentShipObject, RoomInfo room, float roomPos_x, float roomPos_z)
+    /// <param name="roomRow">the current room row, used to set walled areas in pathing system</param>
+    /// <param name="roomCol">the current room column, used to set walled areas in pathing system</param>
+    /// <param name="roomPos_x">the world position roomPos_x for the ship</param>
+    /// <param name="roomPos_z">the world position roomPos_z for the ship</param>
+    public void BuildRoom(GameObject parentShipObject, RoomInfo room, int roomRow, int roomCol, float roomPos_x, float roomPos_z)
     {
         // create an empty room object in the hiearchy to store the room data in an organized way
         GameObject roomObject = new GameObject(room.roomName);
@@ -47,21 +49,22 @@ public class RoomSpawner : MonoBehaviour
 
         // Sets the spawned gameObject to be a child of the empty gameObject
         roomObject.transform.SetParent(parentShipObject.transform);
+        GeneratedShip currentGeneratedShip = parentShipObject.GetComponent<GeneratedShip>();
 
         // go through each row of this room
-        for (int roomRow = 0; roomRow < room.roomTiles.GetLength(0); roomRow++)
+        for (int tileRow = 0; tileRow < room.roomTiles.GetLength(0); tileRow++)
         {
             // and in each row, go through each column
-            for (int roomCol = 0; roomCol < room.roomTiles.GetLength(1); roomCol++)
+            for (int tileCol = 0; tileCol < room.roomTiles.GetLength(1); tileCol++)
             {
                 // check to see if we are on an edge and create a wall if need be
                 // Get the room tile type at this position in the array
-                RoomTiles tileType = room.roomTiles[roomRow, roomCol];
+                RoomTiles tileType = room.roomTiles[tileRow, tileCol];
 
                 // set up the positions for the tiles - subtract as walls don't actually take a tile but are listed in the array so we can have doors
                 // (walls and empty fix issues with positions as they are always on the edges)
-                float currentTilePos_z = roomPos_z - ( (roomRow - 1) * TILE_HEIGHT);
-                float currentTilePos_x = roomPos_x + ( (roomCol - 1) * TILE_WIDTH);
+                float currentTilePos_z = roomPos_z - ( (tileRow - 1) * TILE_HEIGHT);
+                float currentTilePos_x = roomPos_x + ( (tileCol - 1) * TILE_WIDTH);
 
                 switch (tileType)
                 {
@@ -75,6 +78,7 @@ public class RoomSpawner : MonoBehaviour
                         break;
 
                     // floor tiles can be normal floor or stars - stars use different textures
+                    // TODO: Need to figure out how to save this data in the RommInfo (store it in the table so we don't have to calculat it?)
                     case RoomTiles.Star:
                         // Instantiated both the tile and the star but the star on y value higher
                         GameObject starTile = InstantiateTile(roomObject, room.roomType, floorPrefab, currentTilePos_x, currentTilePos_z);
@@ -84,25 +88,32 @@ public class RoomSpawner : MonoBehaviour
                         starTileRenderer.material.mainTexture = starTileTexture;
                         break;
 
-                    // floor tiles can be normal floor or stars
+                    // Non walkable area
+                    // TODO: Add shaders here to make these more like the tiles
                     case RoomTiles.Area:
                         InstantiateTile(roomObject, room.roomType, tileObjects[0], currentTilePos_x, currentTilePos_z);
+
+                        // for placement of the walkable areas in this ship walls are actually empty cells,
+                        // so we subtract one to keep it in the correct grid - it won't look at the far walls either
+                        int currentShipTileRow = (roomRow * ROOM_HEIGHT) + (tileRow - 1);
+                        int currentShipTileCol = (roomCol * ROOM_WIDTH) + (tileCol - 1);
+                        currentGeneratedShip.shipPathingSystem.SetWall(new Vector2Int(currentShipTileRow, currentShipTileCol));
                         break;
 
-                    // floor tiles can be normal floor or stars
+                    // A wall, so not walkable
                     case RoomTiles.Wall:
                         WallOrientation wallOrientation;
 
                         // walls only appear on the edges
-                        if (roomRow == 0)
+                        if (tileRow == 0)
                         {
                             wallOrientation = WallOrientation.North;
                         }
-                        else if (roomCol == 0)
+                        else if (tileCol == 0)
                         {
                             wallOrientation = WallOrientation.West;
                         }
-                        else if (roomRow == room.roomTiles.GetLength(0) - 1)
+                        else if (tileRow == room.roomTiles.GetLength(0) - 1)
                         {
                             wallOrientation = WallOrientation.South;
                         }

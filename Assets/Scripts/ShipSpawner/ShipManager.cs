@@ -1,4 +1,5 @@
-﻿using System.Collections;
+﻿using AlanZucconi.AI.PF;
+using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
 using TMPro;
@@ -357,6 +358,12 @@ public class ShipManager : MonoBehaviour
         Vector3 helmPos = new Vector3(0,0,0);
         int numLifeSupports = 0;
 
+        // set up the grid for bot pathing while building the ship - need to pass it to BuildRoom and have it passed back
+        GameObject currentShip = shipObjects[shipID];
+        GeneratedShip currentGeneratedShip = currentShip.GetComponent<GeneratedShip>();
+        currentGeneratedShip.shipPathingSystem = new Grid2D(new Vector2Int(ship.GetLength(0) * RoomSpawner.ROOM_HEIGHT, 
+                                                                           ship.GetLength(1) * RoomSpawner.ROOM_WIDTH));
+
         // build the ship rooms based on the room layout
         for (int roomRow = 0; roomRow < ship.GetLength(0); roomRow++)
         {
@@ -383,7 +390,7 @@ public class ShipManager : MonoBehaviour
                     }
 
                     // instantiates the room objects based on the strings in the arrays 
-                    roomSpawner.BuildRoom(shipObjects[shipID], room, roomPos_x, roomPos_z);
+                    roomSpawner.BuildRoom(shipObjects[shipID], room, roomRow, roomCol, roomPos_x, roomPos_z);
 
                     // add up the number of life supports so we can store it
                     if (room.moduleType == ModuleType.LifeSupport)
@@ -391,11 +398,22 @@ public class ShipManager : MonoBehaviour
                         numLifeSupports++;
                     }
                 }
+                // make the entire room a wall if it is null
+                else
+                {
+                    for (int row = 0; row < RoomSpawner.ROOM_HEIGHT; row++)
+                    {
+                        for (int col = 0; col < RoomSpawner.ROOM_WIDTH; col++)
+                        {
+                            currentGeneratedShip.shipPathingSystem.SetWall(new Vector2Int(roomRow + row, roomCol + col));
+                        }
+                    }
+                }
             }
         }
 
         // store the number of life supports for later use by the ship
-        shipObjects[shipID].GetComponent<GeneratedShip>().numLifeSupports = numLifeSupports;
+        currentGeneratedShip.numLifeSupports = numLifeSupports;
 
         return helmPos;
 

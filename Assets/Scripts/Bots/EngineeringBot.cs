@@ -5,7 +5,7 @@ using UnityEngine;
 public class EngineeringBot : GenericBot
 {
 
-    // private variables - should this be a parent class?
+    // private variables
 
     /// <summary>
     /// Start is called before the first frame update
