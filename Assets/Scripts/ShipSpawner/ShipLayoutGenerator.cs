@@ -81,7 +81,7 @@ public class ShipLayoutGenerator : MonoBehaviour
         roomsToFill = new Queue<PotentialRoomPos>();
 
         // debug code
-        //roomSpawner = GameObject.Find("ShipSpawner").GetComponent<RoomSpawner>();
+        //roomSpawner = GameObject.Find("ShipManager").GetComponent<RoomSpawner>();
 
     } // end Start
 

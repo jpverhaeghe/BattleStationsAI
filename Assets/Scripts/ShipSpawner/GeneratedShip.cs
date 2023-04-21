@@ -23,6 +23,7 @@ public class GeneratedShip : MonoBehaviour
 
     private ShipManager shipManagerScript;              // a link back to the ship manager so we can have access to the bot prefabs
     private List<GameObject> bots;                      // a list to the AI bot crew for this ship, will use methods to update them
+    private int currentBotBeingFollowed;                // an index into the list to get an active bot to follow
 
     /// <summary>
     /// Initial set up when this ship is created
@@ -145,6 +146,18 @@ public class GeneratedShip : MonoBehaviour
     } // end UpdateShieldEnergy
 
     /// <summary>
+    /// Returns the bot that is currently being followed
+    /// TODO: This should check to see if the bot exists and return another if it doesn't
+    ///         or make it so it adjusts the bot accordingly (perhaps instead of prev and next that would call this)
+    /// </summary>
+    /// <returns></returns>
+    public GameObject GetBotToFollow()
+    {
+        return (bots[currentBotBeingFollowed]);
+
+    } // GetBotToFollow
+
+    /// <summary>
     /// Populates a ship with the given bots for that ship base on number of life supports and room types
     /// </summary>
     /// <param name="shipID"></param>
@@ -164,8 +177,12 @@ public class GeneratedShip : MonoBehaviour
 
         // if after the first four bots are placed, and there are more bots, place them based random jobs and rooms
         // - operations are generic bots that can go anywhere
-        GameObject bot = Instantiate(shipManagerScript.operationsBotPrefab, shipHelmPos, Quaternion.identity);
+        GameObject bot = Instantiate(shipManagerScript.botPrefabs[(int)GenericBot.BotType.COMMAND], shipHelmPos, Quaternion.identity);
+        bot.GetComponent<GenericBot>().SetShip(this);
         bots.Add(bot);
+
+        // set the value of the bot to follow by default on this ship, should be command to start
+        currentBotBeingFollowed = 0;
 
     } // end PopulateShip
 

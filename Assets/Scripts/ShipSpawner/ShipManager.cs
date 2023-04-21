@@ -14,7 +14,7 @@ public class ShipManager : MonoBehaviour
     [Header("Ship Generation Elements")]
     [SerializeField] ShipLayoutGenerator shipLayoutGeneratorScript;     // a link to the ship layout generator to call when generate ship is pressed
     [SerializeField] TMP_Dropdown prebuiltShipList;                     // a list of the prebuilt ships
-    [SerializeField] public GameObject operationsBotPrefab;             // a link to an operations bot prefab for adding to a ship
+    [SerializeField] public GameObject[] botPrefabs;                    // a link to an the bot prefabs for adding to a ship
 
     // TODO: Think of a way to re-use these for each ship as they go through the AI
     // - perhaps update a text box with a name of the ship above them
@@ -322,6 +322,17 @@ public class ShipManager : MonoBehaviour
         return shipObjects[shipID].GetComponent<GeneratedShip>().shipHelmPos;
 
     } // end GetShipHelmPos
+
+    /// <summary>
+    /// Gets the bot of the hero ship so we can follow along with the camera
+    /// TODO: Right now it only gets the first bot, need to add a way to get different bots
+    /// </summary>
+    /// <returns>The bot to follow</returns>
+    public GameObject GetBotToFollow()
+    {
+        return shipObjects[0].GetComponent<GeneratedShip>().GetBotToFollow();
+
+    } // GetBotToFollow
 
     /// <summary>
     /// Sets the ship at the ID value in the list to the given size

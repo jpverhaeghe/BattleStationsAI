@@ -10,18 +10,12 @@ public class GameManager : MonoBehaviour
     private const int TIME_PER_PHASE = 3;                           // time to wait between phases in seconds
 
     // Serialized fields for this script
-    [Header("Camearas for switching perspectives")]
+    [Header("Camearas for switching bot perspecitves")]
     [SerializeField] Camera shipCamera;
-    [SerializeField] Camera playerCamera;
+    //[SerializeField] GameObject shipCamButton;                    // will be re-purposed to switch bots, may need two
 
-    [Header("Elements to move player to helm location")]
+    [Header("Elements to ship creation and updating")]
     [SerializeField] ShipManager shipManager;
-    [SerializeField] GameObject player;
-
-    [Header("UI Elements to turn on and off")]
-    [SerializeField] GameObject shipCamButton;
-    [SerializeField] GameObject playerCamButton;
-    [SerializeField] GameObject cursorToggleInfo;
 
     [Header("HUD Elements to keep track current round and phase")]
     [SerializeField] TMP_Text currentRoundText;
@@ -38,8 +32,8 @@ public class GameManager : MonoBehaviour
     /// </summary>
     void Start()
     {
-        SetShipCamera();
         StartGame();
+        SetShipCamera();
 
     } // end Start
 
@@ -48,23 +42,7 @@ public class GameManager : MonoBehaviour
     /// </summary>
     void Update()
     {
-        // if we are in player camera mode, and the C button is pressed, toggle the cursor
-        if (playerCamera.enabled && Input.GetKeyDown(KeyCode.C))
-        {
-            Cursor.visible = !Cursor.visible;
-
-            // change the cursor lock state based on cursor visibility
-            if (Cursor.visible)
-            {
-                Cursor.lockState = CursorLockMode.Confined;
-            }
-            else
-            {
-                Cursor.lockState = CursorLockMode.None;
-            }
-        }
-
-        // TODO: This will happen every update, perhaps a timer to keep it from going too fast?
+        // Added a timer for now, eventually this will call the bot systems from the Ship Manager and they will perform actions
         timer += Time.deltaTime;
 
         if (timer > TIME_PER_PHASE)
@@ -143,55 +121,12 @@ public class GameManager : MonoBehaviour
     } // end CheckEndRound
 
     /// <summary>
-    /// Sets the camera up for a walk through the ship
-    /// </summary>
-    public void WalkThroughShip()
-    {
-        Vector3 currentHelmPos = shipManager.GetShipHelmPos(0);
-
-        // if the transform is not at the origin, we are good to teleport to the ship
-        if (currentHelmPos != new Vector3())
-        {
-            //currentHelmPos.y += 1;
-            player.transform.position = currentHelmPos;
-            player.SetActive(true);
-
-            // swap the cameras
-            playerCamera.enabled = true;
-            shipCamera.enabled = false;
-
-            // turn off the player cam button
-            playerCamButton.SetActive(false);
-            cursorToggleInfo.SetActive(true);
-
-            // turn on the ship cam button
-            shipCamButton.SetActive(true);
-
-            // by default unlocke the cursor and hide it so players can move freely to begin with
-            Cursor.visible = false;
-            Cursor.lockState = CursorLockMode.None;
-        }
-
-    } // end WalkThroughShip
-
-    /// <summary>
-    /// Sets the camera back to the ship view
+    /// Will re-purpose this to move forward in bots for follow mode
     /// </summary>
     public void SetShipCamera()
     {
-        // set up the main camera as the ship camera to begin with
-        shipCamera.enabled = true;
-        playerCamera.enabled = false;
-
-        // turn on the player cam button
-        playerCamButton.SetActive(true);
-        cursorToggleInfo.SetActive(false);
-
-        // turn off the ship cam button
-        shipCamButton.SetActive(false);
-
-        // de-activate the player
-        player.SetActive(false);
+        // set up the bot to follow at the beginning
+        shipCamera.GetComponent<FollowBot>().SetBotToFollow(shipManager.GetBotToFollow() );
 
     } // end SetShipCamera
 
