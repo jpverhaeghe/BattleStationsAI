@@ -1,18 +1,22 @@
 using AlanZucconi.AI.PF;
 using System.Collections;
 using System.Collections.Generic;
+using System.Reflection;
 using UnityEngine;
+
 
 public class GeneratedShip : MonoBehaviour
 {
     // constants for this script
-    private int NUM_BOTS_PER_LIFE_SUPPORT = 4;
-    private int BOT_Y_OFFSET = 1;
+    private const float TILE_CENTER_OFFSET = 0.5f;
+    private const int NUM_BOTS_PER_LIFE_SUPPORT = 4;
+    private const int BOT_Y_OFFSET = 1;
 
     // public variables used by the ship manager for keeping track of the current ships state
     public RoomInfo[,] shipLayout;                      // the ship layout using room types
     public Grid2D shipPathingSystem;                    // the grid for the pathing system used by bots for this ship
-    public Vector3 shipHelmPos;                         // holds the helm player position for walking through the ship
+    public Vector3 shipWorldOrigin;                     // the world position where the top left corner of the ship layout begins (for pathfinding)
+    //public Vector3 shipHelmPos;                         // holds the helm player position for walking through the ship - may be able to remove!
     public int shipID;                                  // the id of the ship
     public int shipSize;                                // used to store the current generated ship size
     public int numLifeSupports;                         // exposing this so we don't have to re-count later
@@ -23,6 +27,8 @@ public class GeneratedShip : MonoBehaviour
     public int weaponEnergyLevel;                       // the energy amount in the weapons systems
     public int shieldEnergyLevel;                       // the energy amount in the shields systems
 
+    public int hullIntegrity;                           // the ships hull integrity (eventually will depend on modules slagged)
+
     private ShipManager shipManagerScript;              // a link back to the ship manager so we can have access to the bot prefabs
     private List<GameObject> bots;                      // a list to the AI bot crew for this ship, will use methods to update them
     private int currentBotBeingFollowed;                // an index into the list to get an active bot to follow
@@ -30,13 +36,21 @@ public class GeneratedShip : MonoBehaviour
     /// <summary>
     /// Initial set up when this ship is created
     /// </summary>
-    public void SetupShip(ShipManager shipManager, RoomInfo[,] ship, int shipID, int shipSize, Vector3 helmPos)
+    /// <param name="shipManager">A link back to the ship manager that controls this ship</param>
+    /// <param name="ship">The ship layout for use in finding modules</param>
+    /// <param name="worldPos">The ship's world position (should be the 0,0 for the grid layout and pathfinding</param>
+    ///// <param name="helmPos">The helm position for placing bots</param>
+    /// <param name="shipID">The id of the ship inside the list of the Ship Manager - may not be needed</param>
+    /// <param name="shipSize">The size of the ship for use in calculating number of bots on the ship</param>
+    //public void SetupShip(ShipManager shipManager, RoomInfo[,] ship, Vector3 worldPos, Vector3 helmPos, int shipID, int shipSize)
+    public void SetupShip(ShipManager shipManager, RoomInfo[,] ship, Vector3 worldPos, int shipID, int shipSize)
     {
         // store incoming data
         shipManagerScript = shipManager; 
         shipLayout = ship;
-        shipHelmPos = helmPos;
-        shipHelmPos.y += BOT_Y_OFFSET;
+        shipWorldOrigin = worldPos;
+        //shipHelmPos = helmPos;
+        //shipHelmPos.y += BOT_Y_OFFSET;
         this.shipID = shipID;
         this.shipSize = shipSize;
 
@@ -46,6 +60,9 @@ public class GeneratedShip : MonoBehaviour
         helmEnergyLevel = 0;
         weaponEnergyLevel = 0;
         shieldEnergyLevel = 0;
+
+        // set up hull integrity for temp damage tracker (will move to core slagged modules)
+        hullIntegrity = 5;
 
         PopulateShip();
 
@@ -171,24 +188,116 @@ public class GeneratedShip : MonoBehaviour
         // calculate how many bots this ship can have
         int numBots = (numLifeSupports * NUM_BOTS_PER_LIFE_SUPPORT);
 
+        int placedBots = 0;
+
         // go through the ship and find the core rooms and place bots there first according to their station
         // - Helm - (Command: glorified pilot) - only one helm but secondary bots can go in other stations
+        InstantiateBot(GenericBot.BotType.COMMAND, CommandBot.modules);
+        placedBots++;
+
         // - Engine Room (Engineering) - at least one engine, but there can be other engineering rooms for secondary bots
+        InstantiateBot(GenericBot.BotType.ENGINEERING, EngineeringBot.modules);
+        placedBots++;
+
         // - Science Bay (Science) - there is at least one science bay, but there are other science rooms for secondary bots
+        InstantiateBot(GenericBot.BotType.SCIENCE, ScienceBot.modules);
+        placedBots++;
+
         // - First Weapon (Security) - TODO: fix ships to always have one weapon!
+        InstantiateBot(GenericBot.BotType.SECURITY, SecurityBot.modules);
+        placedBots++;
 
         // if after the first four bots are placed, and there are more bots, place them based random jobs and rooms
-        // - operations are generic bots that can go anywhere
-        GameObject bot = Instantiate(shipManagerScript.botPrefabs[(int)GenericBot.BotType.COMMAND], shipHelmPos, Quaternion.identity);
-        bot.GetComponent<GenericBot>().SetShip(this);
-        bots.Add(bot);
+        if (placedBots < numBots)
+        {
+            // - operations are generic bots that can go anywhere
+        }
 
-        // set the bot parent to the ship game object so it is easier to find the crew
-        bot.transform.SetParent(this.gameObject.transform);
 
         // set the value of the bot to follow by default on this ship, should be command to start
         currentBotBeingFollowed = 0;
 
     } // end PopulateShip
+
+    private void InstantiateBot(GenericBot.BotType botType, RoomData.ModuleType[] moduleTypes)
+    {
+        // calculate the position for this bot (first room of the first module type
+        RoomInfo startRoom = FindRoomInShip(moduleTypes[0]);
+        Vector2Int startGridPos = startRoom.GetTerminalLoacation(0);
+
+        // calculate the gridPosition of the room based of the ship origin position (it's world position for its Grid 0,0)
+        Vector3 startPos = new Vector3(shipWorldOrigin.x + startGridPos.y + TILE_CENTER_OFFSET, BOT_Y_OFFSET, 
+                                        shipWorldOrigin.z - startGridPos.x - TILE_CENTER_OFFSET);
+
+        GameObject bot = Instantiate(shipManagerScript.botPrefabs[(int)botType], startPos, Quaternion.identity);
+        GenericBot botScript = bot.GetComponent<GenericBot>();
+        botScript.SetShip(this);
+
+        // get the rooms associated with this bot
+        for (int i = 0; i < moduleTypes.Length; i++)
+        {
+            List<RoomInfo> roomsForThisBot = FindRoomsInShip(moduleTypes[i]);
+
+            foreach (RoomInfo module in roomsForThisBot) 
+            {
+                botScript.AddModule(module);
+            }
+        }
+
+        // add the bot to the ship bot list
+        bots.Add(bot);
+
+        // set the bot parent to the ship game object so it is easier to find the crew
+        bot.transform.SetParent(this.gameObject.transform);
+
+    } // end InstantiateBot
+
+    /// <summary>
+    /// Goes through the ship layout and finds the first room of the given type
+    /// </summary>
+    /// <param name="moduleToFind">The type of room to find</param>
+    /// <returns>The found room or null if not found</returns>
+    private RoomInfo FindRoomInShip(RoomData.ModuleType moduleToFind)
+    {
+        // go through the ship layout until the ModuleType is found - finds the first one for now
+        for (int roomRow = 0; roomRow < shipLayout.GetLength(0); roomRow++)
+        {
+            for (int roomCol = 0; roomCol < shipLayout.GetLength(1); roomCol++)
+            {
+                if ((shipLayout[roomRow, roomCol] != null) && (shipLayout[roomRow, roomCol].moduleType == moduleToFind))
+                {
+                    return shipLayout[roomRow, roomCol];
+                }
+            }
+        }
+
+        return null;
+
+    } // FindRoomInShip
+
+    /// <summary>
+    /// Goes through the ship layout and finds all the rooms in the ship with the given module type
+    /// </summary>
+    /// <param name="moduleType">the module type to find</param>
+    /// <returns>A list of all the modules of the given type, empty if there were none</returns>
+    private List<RoomInfo> FindRoomsInShip(RoomData.ModuleType moduleType)
+    {
+        List<RoomInfo> rooms = new List<RoomInfo>();
+
+        // go through the ship layout until the ModuleType is found - finds all of the rooms of the given module typefor (int roomRow = 0; roomRow < shipLayout.GetLength(0); roomRow++)
+        for (int roomRow = 0; roomRow < shipLayout.GetLength(0); roomRow++)
+        {
+            for (int roomCol = 0; roomCol < shipLayout.GetLength(1); roomCol++)
+            {
+                if ((shipLayout[roomRow, roomCol] != null) && (shipLayout[roomRow, roomCol].moduleType == moduleType))
+                {
+                    rooms.Add(shipLayout[roomRow, roomCol]);
+                }
+            }
+        }
+
+        return rooms;
+
+    } // FindRoomsInShip
 
 }

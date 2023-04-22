@@ -4,6 +4,8 @@ using UnityEngine;
 
 public class SecurityBot : GenericBot
 {
+    // constant variables for this bot
+    public static RoomData.ModuleType[] modules = { RoomData.ModuleType.Cannon, RoomData.ModuleType.MissileBay };
 
     // private variables
 
@@ -12,18 +14,20 @@ public class SecurityBot : GenericBot
     /// </summary>
     void Start()
     {
+        base.Start();
+
         // security bots profession is combat, they can work on combat modules and general combat well, but not other actions
         athletics = NON_PROFESSION_SKILL_VALUE;
         combat = PROFESSION_SKILL_VALUE;
-        engineering = NON_PROFESSION_SKILL_VALUE;
-        piloting = NON_PROFESSION_SKILL_VALUE;
-        science = NON_PROFESSION_SKILL_VALUE;
 
     } // end Start
 
-    // Update is called once per frame
+    /// <summary>
+    /// Update is called once per frame - for now just calling the base class
+    /// </summary>
     void Update()
     {
+        base.Update();
         
-    }
+    } // end Update
 }

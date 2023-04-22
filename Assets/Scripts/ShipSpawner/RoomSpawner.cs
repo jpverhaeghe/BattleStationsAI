@@ -5,22 +5,11 @@ using static RoomData;
 
 public class RoomSpawner : MonoBehaviour
 {
-    public enum WallOrientation
-    {
-        North,
-        East,
-        South,
-        West
-    }
-
     // Constant values for the ship room sizes
     public static int ROOM_HEIGHT = 7;                                  // the height in meters of the room 
     public static int ROOM_WIDTH = 7;                                   // the width in meters of the rooms
     private static int TILE_HEIGHT = 1;                                 // the height in meters of a tile 
     private static int TILE_WIDTH = 1;                                  // the width in meters of a tile
-    private static float EAST_WALL_OFFSET = 1f;                         // The offset for the east wall when it is at the right or bottom of the tile
-    private static float SOUTH_WALL_OFFSET = 0.9f;                      // The offset for the south wall when it is at the right or bottom of the tile
-    private static float WEST_WALL_OFFSET = 0.1f;                       // The offset for the west wall when it is at the right or bottom of the tile
 
     // Serialized fields for this objec that show up in the editor
     [Header("Tile prefabs and data for creating rooms")]
@@ -30,7 +19,6 @@ public class RoomSpawner : MonoBehaviour
     [SerializeField] Material[] tileMaterials;                          // room type tileMaterials to apply to the room tiles based on the room type
     [SerializeField] Texture floorTileTexture;                          // the texture to apply to floor tiles
     [SerializeField] Texture starTileTexture;                           // the texture to apply to star tiles
-
 
     /// <summary>
     /// Constructs of the room at the given location
@@ -89,6 +77,9 @@ public class RoomSpawner : MonoBehaviour
                         // get the child object (the geometry) and set the texture for this tile
                         Renderer starTileRenderer = starTile.GetComponentInChildren<Renderer>();
                         starTileRenderer.material.mainTexture = starTileTexture;
+
+                        // store the star tile location in the roomInfo structure
+                        room.AddTerminalLocation(new Vector2Int(currentShipTileRow, currentShipTileCol));
                         break;
 
                     // Non walkable area

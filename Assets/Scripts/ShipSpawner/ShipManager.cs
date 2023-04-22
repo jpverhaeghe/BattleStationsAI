@@ -9,7 +9,6 @@ using static RoomData;
 public class ShipManager : MonoBehaviour
 {
     // private constant variables
-    private const float HELM_CENTER_OFFSET = 3.5f;
 
     // Serialized fields used by this script
     [Header("Ship Generation Elements")]
@@ -45,9 +44,6 @@ public class ShipManager : MonoBehaviour
     {
         // assigns the RoomSpawner script for later use
         roomSpawner = gameObject.GetComponent<RoomSpawner>();
-
-        // create the list of ship game objects
-        shipObjects = new List<GameObject>();
 
     } // end Awake
 
@@ -284,6 +280,12 @@ public class ShipManager : MonoBehaviour
     /// <param name="zPos">Where the ship should be placed in the world on the Z axis</param>
     public void CreateShip(RoomInfo[,] ship, float xPos, float zPos)
     {
+        // create the list of ship game objects if one does not already exist
+        if (shipObjects == null)
+        {
+            shipObjects = new List<GameObject>();
+        }
+
         // create a ship in the list to store the data in for later
         string shipObjectName = "EnemyShip";
 
@@ -294,7 +296,8 @@ public class ShipManager : MonoBehaviour
         }
 
         GameObject shipObject = new GameObject(shipObjectName);
-        shipObject.transform.position = new Vector3(xPos, 0, zPos);
+        Vector3 shipWorldPos = new Vector3(xPos, 0, zPos);
+        shipObject.transform.position = shipWorldPos;
 
         // add the ship component that keeps track of an individual ship status
         shipObject.AddComponent<GeneratedShip>();
@@ -304,8 +307,9 @@ public class ShipManager : MonoBehaviour
         this.shipObjects.Add(shipObject);
 
         // build the ship
-        Vector3 helmPos = BuildShip(shipID, ship, xPos, zPos);
-        shipObjects[shipID].GetComponent<GeneratedShip>().SetupShip(this, ship, shipID, currentSpawnShipSize, helmPos);
+        //Vector3 helmPos = BuildShip(shipID, ship, xPos, zPos);
+        BuildShip(shipID, ship, xPos, zPos);
+        shipObjects[shipID].GetComponent<GeneratedShip>().SetupShip(this, ship, shipWorldPos, /*helmPos,*/ shipID, currentSpawnShipSize);
 
         // if the ship ID is zero, set the camera to follow the bots on that ship
         gameManager.SetShipCamera();
@@ -317,11 +321,11 @@ public class ShipManager : MonoBehaviour
     /// </summary>
     /// <param name="shipID">The id of the ship to access</param>
     /// <returns>The vector 3 position of where to place a player in the helm</returns>
-    public Vector3 GetShipHelmPos(int shipID)
+    /*public Vector3 GetShipHelmPos(int shipID)
     {
         return shipObjects[shipID].GetComponent<GeneratedShip>().shipHelmPos;
 
-    } // end GetShipHelmPos
+    } // end GetShipHelmPos*/
 
     /// <summary>
     /// Gets the bot of the hero ship so we can follow along with the camera
@@ -352,10 +356,11 @@ public class ShipManager : MonoBehaviour
     /// <param name="ship">The ship as a room information layout array</param>
     /// <param name="worldPos_x">The x world position for the top left of the ship</param>
     /// <param name="worldPos_z">The z world position for the top left of the ship</param>
-    /// <returns>A vector3 with the ship's helm coordinates</returns>
-    private Vector3 BuildShip(int shipID, RoomInfo[,] ship, float worldPos_x, float worldPos_z)
+    ///// <returns>A vector3 with the ship's helm coordinates</returns>
+    //private Vector3 BuildShip(int shipID, RoomInfo[,] ship, float worldPos_x, float worldPos_z)
+    private void BuildShip(int shipID, RoomInfo[,] ship, float worldPos_x, float worldPos_z)
     {
-        Vector3 helmPos = new Vector3(0,0,0);
+        //Vector3 helmPos = new Vector3(0,0,0);
         int numLifeSupports = 0;
 
         // set up the grid for bot pathing while building the ship - need to pass it to BuildRoom and have it passed back
@@ -382,12 +387,15 @@ public class ShipManager : MonoBehaviour
                     // as rooms can be offset from other rooms based on location in the ship, set the roomPos_x to the current col times the width of a room
                     float roomPos_x = worldPos_x + (roomCol * RoomSpawner.ROOM_WIDTH);
 
+                    // set the world position of this room
+                    room.SetRoomWorldPos(new Vector3(roomPos_x, 0, roomPos_z));
+
                     // if the room is the helm, then set up the helm position
-                    if (room.moduleType == ModuleType.Helm)
+                    /*if (room.moduleType == ModuleType.Helm)
                     {
-                        helmPos.x = roomPos_x + HELM_CENTER_OFFSET;
-                        helmPos.z = roomPos_z - HELM_CENTER_OFFSET;
-                    }
+                        helmPos.x = roomPos_x + TILE_CENTER_OFFSET;
+                        helmPos.z = roomPos_z - TILE_CENTER_OFFSET;
+                    }*/
 
                     // instantiates the room objects based on the strings in the arrays 
                     roomSpawner.BuildRoom(shipObjects[shipID], room, roomRow, roomCol, roomPos_x, roomPos_z);
@@ -415,7 +423,7 @@ public class ShipManager : MonoBehaviour
         // store the number of life supports for later use by the ship
         currentGeneratedShip.numLifeSupports = numLifeSupports;
 
-        return helmPos;
+        //return helmPos;
 
     } // end BuildShip
 
@@ -424,14 +432,18 @@ public class ShipManager : MonoBehaviour
     /// </summary>
     private void ClearShips()
     {
-        // for now remove the old ships (if there are any) as this method should only be called from the generate ship buttons
-        for (int i = 0; i < shipObjects.Count; i++)
+        // only need to clear ships if the list exists
+        if (shipObjects != null)
         {
-            ClearShip(i);
-        }
+            // for now remove the old ships (if there are any) as this method should only be called from the generate ship buttons
+            for (int i = 0; i < shipObjects.Count; i++)
+            {
+                ClearShip(i);
+            }
 
-        // clear out the ship list as well
-        shipObjects.Clear();
+            // clear out the ship list as well
+            shipObjects.Clear();
+        }
 
     } // end ClearShip
 

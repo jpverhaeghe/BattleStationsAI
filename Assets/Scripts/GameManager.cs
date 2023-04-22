@@ -77,6 +77,7 @@ public class GameManager : MonoBehaviour
         }
 
         // TODO: Move ships based on current speeds and direction
+        // - for now leaving as stationary ships ala FTL
 
         // TODO: Move Missiles
 
@@ -85,13 +86,16 @@ public class GameManager : MonoBehaviour
         // TODO: Perform hero actions (bots for now - but one set of AI must go first)
 
         // TODO: Enemy Actions
+        // - for now no enemy bots, just logic to fire at us if we are too close
 
         // Steady ship
         shipManager.SteadyShips();
 
         // TODO: Deal with fire, gas and life support issues
+        // - no module damage yet, probably won't deal with fire or gas this time
 
         // TODO: Character recovery
+        // - as they are all bots in this scenario - no need to do this
 
         CheckEndRound();
 

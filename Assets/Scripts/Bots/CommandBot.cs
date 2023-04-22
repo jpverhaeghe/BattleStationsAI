@@ -4,6 +4,8 @@ using UnityEngine;
 
 public class CommandBot : GenericBot
 {
+    // constant variables for this bot
+    public static RoomData.ModuleType[] modules = { RoomData.ModuleType.Helm };
 
     // private variables
 
@@ -12,18 +14,20 @@ public class CommandBot : GenericBot
     /// </summary>
     void Start()
     {
+        base.Start();
+
         // command bots profession is piloting, they can control the ship from the helm well, but not other actions
         athletics = NON_PROFESSION_SKILL_VALUE;
-        combat = NON_PROFESSION_SKILL_VALUE;
-        engineering = NON_PROFESSION_SKILL_VALUE;
         piloting = PROFESSION_SKILL_VALUE;
-        science = NON_PROFESSION_SKILL_VALUE;
 
     } // end Start
 
-    // Update is called once per frame
+    /// <summary>
+    /// Update is called once per frame - for now just calling the base class
+    /// </summary>
     void Update()
     {
-        
-    }
+        base.Update();
+
+    } // end Update
 }
