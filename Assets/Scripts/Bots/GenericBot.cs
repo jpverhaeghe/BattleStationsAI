@@ -46,6 +46,7 @@ public class GenericBot : MonoBehaviour
     protected BotStates currentState = BotStates.IDLE;              // sets up the default state for this bot
     protected bool runningState = false;                            // a boolean used to make sure we don't start multiple co-routines
     protected int moveSpeed = 4;                                    // the amount of squares a bot can move - same for all bots
+    protected int currentModule = 0;                                // allows bots to move to differnt modules if they have more
     protected int currentTerminal = 0;                              // the terminal we are currently working at (may not need later)
 
 
@@ -81,7 +82,7 @@ public class GenericBot : MonoBehaviour
 
             case BotStates.MOVE:
                 // for now just get the next terminal location for the first module
-                FindNextMoveLocation(myModules[0]);
+                FindNextMoveLocation(myModules[currentModule]);
                 break;
 
             case BotStates.MOVING:
@@ -177,6 +178,15 @@ public class GenericBot : MonoBehaviour
         if (currentTerminal >= moduleToMoveTo.GetTerminalLoacations().Count)
         {
             currentTerminal = 0;
+
+            // some bots have more than one module they look after, have them roam to the next one
+            currentModule++;
+
+            // capping the module so we don't go out of bounds
+            if (currentModule >= myModules.Count)
+            {
+                currentModule = 0;
+            }
         }
 
         // find the path to the given destination

@@ -95,14 +95,14 @@ public class RoomSpawner : MonoBehaviour
                     case RoomTiles.Wall:
                         InstantiateWall(roomObject, currentTilePos_x, currentTilePos_z);
 
-                        // for placement of the walkable areas in this ship walls are actually empty cells
+                        // for placement of the walkable areas in this ship walls should not be walkable
                         currentGeneratedShip.shipPathingSystem.SetWall(new Vector2Int(currentShipTileRow, currentShipTileCol));
                         break;
 
                     // default is to do nothing (RoomTiles.Empty areas)
                     default:
                         // for placement of the walkable areas in this ship walls are actually empty cells
-                        currentGeneratedShip.shipPathingSystem.SetWall(new Vector2Int(currentShipTileRow, currentShipTileCol));
+                        //currentGeneratedShip.shipPathingSystem.SetWall(new Vector2Int(currentShipTileRow, currentShipTileCol));
                         break;
                 }
             }
