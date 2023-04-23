@@ -12,11 +12,13 @@ public class RoomInfo
     public RoomFacing roomFacing;
     public ModuleType moduleType;
     public RoomTiles[,] roomTiles;
+    public Vector2Int roomGridPos;
     public bool externalFacing;
 
-    private List<Vector2Int> terminalLoacations = new List<Vector2Int>();
+    private List<Vector2Int> terminalLocations = new List<Vector2Int>();
     private Vector3 roomWorldPos;
     private int numUsedMarkers = 0;
+    private bool broken = false;
 
     /// <summary>
     /// the constructor for this class
@@ -41,7 +43,7 @@ public class RoomInfo
     /// <returns>A list of all current terminal locations in this room</returns>
     public List<Vector2Int> GetTerminalLoacations() 
     {  
-        return terminalLoacations;
+        return terminalLocations;
 
     } // end GetTerminalLoacations
 
@@ -53,13 +55,13 @@ public class RoomInfo
     /// <returns>A list of all current terminal locations in this room</returns>
     public Vector2Int GetTerminalLoacation(int terminalIndex)
     {
-        if ((terminalIndex >= 0) && (terminalIndex < terminalLoacations.Count))
+        if ((terminalIndex >= 0) && (terminalIndex < terminalLocations.Count))
         {
-            return terminalLoacations[terminalIndex];
+            return terminalLocations[terminalIndex];
         }
         else
         {
-            return terminalLoacations[0];
+            return terminalLocations[0];
         }
 
     } // end GetTerminalLoacation
@@ -70,7 +72,7 @@ public class RoomInfo
     /// <param name="location">the terminal location on the Grid2D</param>
     public void AddTerminalLocation(Vector2Int location)
     {
-        terminalLoacations.Add(location);
+        terminalLocations.Add(location);
 
     } // AddTerminalLocation
 
@@ -104,6 +106,7 @@ public class RoomInfo
 
     } // end GetNumUsedMarkers
 
+
     /// <summary>
     /// Increases the number of used markers in this room by the amount given - when certain tasks are done in this room
     /// </summary>
@@ -122,5 +125,33 @@ public class RoomInfo
         numUsedMarkers = 0;
 
     } // end ClearUsedMarkers
+
+    /// <summary>
+    /// Returns if this module is broken (system not fully implemented yet)
+    /// </summary>
+    /// <returns>true if the module is broken, false if not</returns>
+    public bool IsBroken() 
+    { 
+        return broken;
+
+    } // IsBroken
+
+    /// <summary>
+    /// Repairs the module
+    /// </summary>
+    public void BreakModule()
+    {
+        broken = true;
+
+    } // end BreakModule
+
+    /// <summary>
+    /// Repairs the module
+    /// </summary>
+    public void RepairModule()
+    {
+        broken = false;
+
+    } // end RepairModule
 
 }

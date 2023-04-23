@@ -27,15 +27,20 @@ public class GenericBot : MonoBehaviour
     public static RoomData.ModuleType[] modules = { RoomData.ModuleType.CargoBay, RoomData.ModuleType.LifeSupport };
 
     // constant values used by other classes (specifically sub-classes)
-    public static int PROFESSION_SKILL_VALUE = 3;
-    public static int NON_PROFESSION_SKILL_VALUE = 1;
+    public static int PROFESSION_SKILL_VALUE = 3;                   // starting value for the profession the bot is trained in
+    public static int NON_PROFESSION_SKILL_VALUE = 1;               // starting value for all other professions (untrained)
+    public static int ADD_OR_USED_MULTIPLIER = 3;                   // the difficulty multiplier for each used marker on a module
+    public static int MAX_DIFFICULTY_TO_TEST = 9;                   // the largest difficulty a bot will test against
+    public static int MIN_VALUE_TO_ADD_EXTRA = 6;                   // the minimum level to try for moving/pumping more than 1 level
+    public static int REPAIR_DEFAULT_DIFFICULTY = 11;
+    public const int NUM_DIE_SIDES = 6;
 
     // public variables to be accessed by outside scripts
+    public List<RoomInfo> myModules;                                // The modules on the ship that this bot is responsible for
 
     // protected values used by this class and its sub-classes 
     // TODO: if we need these outward facing, then make public
     protected GeneratedShip myShip;                                 // a link back to the ship we are tied to
-    protected List<RoomInfo> myModules;                             // The modules on the ship that this bot is responsible for
     protected int athletics;                                        // used for movement
     protected int combat;                                           // used for combat - weapons officer profession
     protected int engineering;                                      // used for combat - engineering officer profession
@@ -82,7 +87,7 @@ public class GenericBot : MonoBehaviour
 
             case BotStates.MOVE:
                 // for now just get the next terminal location for the first module
-                FindNextMoveLocation(myModules[currentModule]);
+                FindNextMoveLocation();
                 break;
 
             case BotStates.MOVING:
@@ -150,10 +155,59 @@ public class GenericBot : MonoBehaviour
     } // end GetGridPos
 
     /// <summary>
+    /// Performs an action check for the bot given the difficulty of the task
+    /// TODO: May need to make this a generic function for all characters - so may move to GameManager
+    /// </summary>
+    /// <param name="difficulty">the difficulty of the task</param>
+    /// <returns>true if it was a success, false otherwise</returns>
+    public bool PerformActionCheck(int difficulty)
+    {
+        // if the difficulty is above 2 x NUM_DIE_SIDES it fails automatically
+        if (difficulty > (2 * NUM_DIE_SIDES))
+        {
+            return false;
+        }
+
+        // roll the die here using random (will eventually pause game and roll die in game)
+        // TODO: Display result and difficulty to screen
+        int checkResult = RollDie() + RollDie();
+
+        Debug.Log("Bot performed a check: " +  checkResult + " vs. difficulty of " + difficulty);
+        return (checkResult >= difficulty);
+
+    } // PerformActionCheck
+
+    /// <summary>
+    /// Rolls the die so it ends up 1 through num sides
+    /// </summary>
+    /// <returns>the randomized integer value</returns>
+    public int RollDie()
+    {
+        return (Random.Range(0, NUM_DIE_SIDES) + 1);
+
+    } // end RollDie
+
+    /// <summary>
+    /// Attempts to increase the difficulty of changing engine energy levls if it is feasible
+    /// </summary>
+    /// <param name="currentDifficultyLevel">The current difficulty attempting</param>
+    /// <returns>the updated difficulty</returns>
+    protected int AttemptHigherDifficulty(int currentDifficultyLevel)
+    {
+        if (currentDifficultyLevel <= MIN_VALUE_TO_ADD_EXTRA)
+        {
+            currentDifficultyLevel += ADD_OR_USED_MULTIPLIER;
+        }
+
+        return currentDifficultyLevel;
+
+    } // end AttemptHigherDifficulty
+
+    /// <summary>
     /// Runs a generic idle state where it waits for a second before seting up a move state
     /// </summary>
     /// <returns>yields the system until done with the wait, then finishes the state</returns>
-    private IEnumerator PerformIdleState()
+    protected virtual IEnumerator PerformIdleState()
     {
         runningState = true;
         yield return new WaitForSeconds(1);
@@ -165,10 +219,10 @@ public class GenericBot : MonoBehaviour
     /// <summary>
     /// Finds a path to the next module terminal location for the given module
     /// </summary>
-    /// <param name="moduleToMoveTo">The module to search for a terminal for pathing</param>
-    private void FindNextMoveLocation(RoomInfo moduleToMoveTo)
+    protected virtual void FindNextMoveLocation()
     {
         // get the next terminal location for the given module
+        RoomInfo moduleToMoveTo = myModules[currentModule];
         Vector2Int moveLocation  = moduleToMoveTo.GetTerminalLoacation(currentTerminal);
 
         // increase the terminal location index and wrap around if it is larger than the number in the module
@@ -200,7 +254,7 @@ public class GenericBot : MonoBehaviour
     /// <summary>
     /// Moves to the next location one square at a time
     /// </summary>
-    private IEnumerator MoveToLocation()
+    protected IEnumerator MoveToLocation()
     {
         // if there is a path, follow it
         if (currentPath != null)
@@ -245,8 +299,9 @@ public class GenericBot : MonoBehaviour
     /// - will need to set this up in idle perhaps - using heuristics to determine the best option for the bot at that time
     /// </summary>
     /// <returns>yields the system until done with the wait, then finishes the state<</returns>
-    private IEnumerator DoAction()
+    protected virtual IEnumerator DoAction()
     {
+        // choose the action to perform (or not perform)
         runningState = true;
         yield return new WaitForSeconds(0.5f);
         currentState = BotStates.IDLE;

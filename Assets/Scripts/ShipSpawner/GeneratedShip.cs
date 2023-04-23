@@ -7,12 +7,21 @@ using UnityEngine;
 
 public class GeneratedShip : MonoBehaviour
 {
+    // the power areas available for ships
+    public enum ShipPowerAreas
+    {
+        HELM,
+        WEAPONS,                // guns in the game - I like weapons better
+        SHIELDS
+    }
+
     // constants for this script
     private const float TILE_CENTER_OFFSET = 0.5f;
     private const int NUM_BOTS_PER_LIFE_SUPPORT = 4;
     private const int BOT_Y_OFFSET = 1;
 
     // public variables used by the ship manager for keeping track of the current ships state
+    public ShipManager shipManagerScript;              // a link back to the ship manager so we can have access to the bot prefabs
     public RoomInfo[,] shipLayout;                      // the ship layout using room types
     public Grid2D shipPathingSystem;                    // the grid for the pathing system used by bots for this ship
     public Vector3 shipWorldOrigin;                     // the world position where the top left corner of the ship layout begins (for pathfinding)
@@ -22,14 +31,15 @@ public class GeneratedShip : MonoBehaviour
     public int numLifeSupports;                         // exposing this so we don't have to re-count later
 
     public int currentSpeed;                            // the current speed of the ship
-    public int outOfControlLevel;                       // how out of control the ship is, affects bot skills
-    public int helmEnergyLevel;                         // the energy amount in the ships drive systems (turning, etc.)
-    public int weaponEnergyLevel;                       // the energy amount in the weapons systems
-    public int shieldEnergyLevel;                       // the energy amount in the shields systems
+    //public int outOfControlLevel;                       // how out of control the ship is, affects bot skills
 
-    public int hullIntegrity;                           // the ships hull integrity (eventually will depend on modules slagged)
+    public int hullDamage;                              // the ships hull integrity
 
-    private ShipManager shipManagerScript;              // a link back to the ship manager so we can have access to the bot prefabs
+    //public bool[] energySystemRequests;
+    public Queue<ShipPowerAreas> energyUpdateQueue;
+    public int[] energySystemLevels;
+
+    // private variables only seen by this script
     private List<GameObject> bots;                      // a list to the AI bot crew for this ship, will use methods to update them
     private int currentBotBeingFollowed;                // an index into the list to get an active bot to follow
 
@@ -56,32 +66,24 @@ public class GeneratedShip : MonoBehaviour
 
         // set up base stats
         currentSpeed = 1;
-        outOfControlLevel = 0;
-        helmEnergyLevel = 0;
-        weaponEnergyLevel = 0;
-        shieldEnergyLevel = 0;
+        //outOfControlLevel = 0;
+        hullDamage = 0;
 
-        // set up hull integrity for temp damage tracker (will move to core slagged modules)
-        hullIntegrity = 5;
+        // set up the energy systems for this ship (using an enum to make easier to manipulate by others)
+        int energySystemNum = System.Enum.GetNames(typeof(ShipPowerAreas)).Length;
+        energyUpdateQueue = new Queue<ShipPowerAreas>();
+        //energySystemRequests = new bool[energySystemNum];
+        energySystemLevels = new int[energySystemNum];
+
+        for (int i = 0; i < energySystemLevels.Length; i++)
+        {
+            //energySystemRequests[i] = false;
+            energySystemLevels[i] = 0;
+        }
 
         PopulateShip();
 
     } // end SetupShip
-
-    /// <summary>
-    /// Performs the necessary adjustments for a ship at the end of the round
-    /// </summary>
-    public void ShipRoundCleanUp()
-    {
-        // adjust the levels per the rules (all energy and speed are reduced by 1)
-        UpdateSpeed(-1);
-        UpdateHelmEnergy(-1);
-        UpdateWeaponsEnergy(-1);
-        UpdateShieldEnergy(-1);
-
-        // TODO: Remove counters on any modules (engineering, helm, weapons, etc.)
-
-    } // ShipRoundCleanUp
 
     /// <summary>
     /// Updates the speed with to the new value, never less than zero
@@ -104,7 +106,7 @@ public class GeneratedShip : MonoBehaviour
     /// Updates the Out of Control factor (OOC) with to the new value, never less than zero
     /// </summary>
     /// <param name="speedChange">The value to change the OOC by</param>
-    public void UpdateOutOfControl(int oocChange)
+    /*public void UpdateOutOfControl(int oocChange)
     {
         outOfControlLevel += oocChange;
 
@@ -114,55 +116,52 @@ public class GeneratedShip : MonoBehaviour
             outOfControlLevel = 0;
         }
 
-    } // end UpdateOutOfControl
+    } // end UpdateOutOfControl*/
+
+    public void UpdateHullDamage(int hullDamage)
+    {
+        this.hullDamage += hullDamage;
+
+        // can't have a spped of less than zero
+        if (this.hullDamage < 0)
+        {
+            this.hullDamage = 0;
+        }
+
+    } // end UpdateHullDamage
 
     /// <summary>
     /// Updates the helm energy level with to the new value, never less than zero
     /// </summary>
-    /// <param name="helmEnergyChange">The value to change the helm energy by</param>
-    public void UpdateHelmEnergy(int helmEnergyChange)
+    /// <param name="energyChange">The value to change the helm energy by</param>
+    /// <param name="energySystem">The energy system to update</param>
+    public void UpdateEnergy(int energySystem, int energyChange)
     {
-        helmEnergyLevel += helmEnergyChange;
+        energySystemLevels[energySystem] += energyChange;
 
         // can't have a spped of less than zero
-        if (helmEnergyLevel < 0)
+        if (energySystemLevels[energySystem] < 0)
         {
-            helmEnergyLevel = 0;
+            energySystemLevels[energySystem] = 0;
         }
 
-    } // end UpdateHelmEnergy
+    } // end UpdateEnergy
 
     /// <summary>
-    /// Updates the weapons energy level with to the new value, never less than zero
+    /// Clears all the used markers at the end of each round
     /// </summary>
-    /// <param name="weaponsEnergyChange">The value to change the weapons energy by</param>
-    public void UpdateWeaponsEnergy(int weaponsEnergyChange)
+    public void ClearUsedMarkers()
     {
-        weaponEnergyLevel += weaponsEnergyChange;
-
-        // can't have a spped of less than zero
-        if (weaponEnergyLevel < 0)
+        // go through all the modules in this ship and clear the used markers - happens at end of round
+        foreach (GameObject bot in bots)
         {
-            weaponEnergyLevel = 0;
+            foreach (RoomInfo module in bot.GetComponent<GenericBot>().myModules)
+            {
+                module.ClearUsedMarkers();
+            }
         }
 
-    } // end UpdateWeaponsEnergy
-
-    /// <summary>
-    /// Updates the shield energy level with to the new value, never less than zero
-    /// </summary>
-    /// <param name="shieldEnergyChange">The value to </param>
-    public void UpdateShieldEnergy(int shieldEnergyChange)
-    {
-        shieldEnergyLevel += shieldEnergyChange;
-
-        // can't have a spped of less than zero
-        if (shieldEnergyLevel < 0)
-        {
-            shieldEnergyLevel = 0;
-        }
-
-    } // end UpdateShieldEnergy
+    } // end ClearUsedMarkers
 
     /// <summary>
     /// Returns the bot that is currently being followed
@@ -221,9 +220,7 @@ public class GeneratedShip : MonoBehaviour
 
     private void InstantiateBot(GenericBot.BotType botType, RoomData.ModuleType[] moduleTypes)
     {
-        // calculate the position for this bot (first room of the first module type
-        RoomInfo startRoom = FindRoomInShip(moduleTypes[0]);
-        Vector2Int startGridPos = startRoom.GetTerminalLoacation(0);
+        Vector2Int startGridPos = GetRoomStartGridLocation(moduleTypes);
 
         // calculate the gridPosition of the room based of the ship origin position (it's world position for its Grid 0,0)
         Vector3 startPos = new Vector3(shipWorldOrigin.x + startGridPos.y + TILE_CENTER_OFFSET, BOT_Y_OFFSET, 
@@ -251,6 +248,47 @@ public class GeneratedShip : MonoBehaviour
         bot.transform.SetParent(this.gameObject.transform);
 
     } // end InstantiateBot
+
+    /// <summary>
+    /// Gets the starting location of the Grid in the room for a bot based on modules it uses
+    ///     TODO: Need to fix this for multiple bots of the same type...perhaps keep track of modules that have bots
+    /// </summary>
+    /// <param name="moduleTypes">The bots modules used by the bot</param>
+    /// <returns>the Grid position for the module types given, defaults to center of life support module</returns>
+    private Vector2Int GetRoomStartGridLocation(RoomData.ModuleType[] moduleTypes)
+    {
+        // calculate the position for this bot (first room of the first module type)
+        // TODO: fix this to use a while loop and increase the index incrementally until there are none left to check
+        RoomInfo startRoom = FindRoomInShip(moduleTypes[0]);
+
+        // some bots may not get their first choice (mainly security and operation bots) - operations bots may get removed
+        if (startRoom == null)
+        {
+            if (moduleTypes.Length > 1)
+            {
+                // security bots may not have their first choice of room (cannon), so find a missile bay for them
+                startRoom = FindRoomInShip(moduleTypes[1]);
+            }
+            else
+            {
+                startRoom = FindRoomInShip(RoomData.ModuleType.LifeSupport);
+            }
+        }
+
+        // assume the center of the room (for life support)
+        Vector2Int startGridPos = startRoom.roomGridPos;
+        startGridPos.x += 3;
+        startGridPos.y += 3;
+
+        // otherwise if there are terminals, use the first one for now
+        if (startRoom.GetTerminalLoacations().Count > 0)
+        {
+            startGridPos = startRoom.GetTerminalLoacation(0);
+        }
+
+        return startGridPos;
+
+    } // end GetRoomStartGridLocation
 
     /// <summary>
     /// Goes through the ship layout and finds the first room of the given type

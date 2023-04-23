@@ -39,6 +39,11 @@ public class RoomSpawner : MonoBehaviour
         roomObject.transform.SetParent(parentShipObject.transform);
         GeneratedShip currentGeneratedShip = parentShipObject.GetComponent<GeneratedShip>();
 
+        // set the room grid position so it can be used later for bot placement
+        int shipOffsetGridRow = (roomRow * ROOM_HEIGHT);
+        int shipOffsetGridCol = (roomCol * ROOM_WIDTH);
+        room.roomGridPos = new Vector2Int(shipOffsetGridRow, shipOffsetGridCol);
+
         // go through each row of this room
         for (int tileRow = 0; tileRow < room.roomTiles.GetLength(0); tileRow++)
         {
@@ -54,8 +59,8 @@ public class RoomSpawner : MonoBehaviour
                 float currentTilePos_x = roomPos_x + (tileCol * TILE_WIDTH);
 
                 // the current position of this tile in the walkable area graph
-                int currentShipTileRow = (roomRow * ROOM_HEIGHT) + (tileRow);
-                int currentShipTileCol = (roomCol * ROOM_WIDTH) + (tileCol);
+                int currentShipTileRow = shipOffsetGridRow + (tileRow);
+                int currentShipTileCol = shipOffsetGridCol + (tileCol);
 
                 switch (tileType)
                 {

@@ -70,6 +70,7 @@ public class GameManager : MonoBehaviour
 
     private void DoPhases()
     {
+        // TODO: Right now just letting bots do their thing. may add turn based later.
         // Phase 1: if we are in phase 1, there is a little additional set up
         if (currentPhase == 1)
         {
@@ -89,7 +90,7 @@ public class GameManager : MonoBehaviour
         // - for now no enemy bots, just logic to fire at us if we are too close
 
         // Steady ship
-        shipManager.SteadyShips();
+        //shipManager.SteadyShips();
 
         // TODO: Deal with fire, gas and life support issues
         // - no module damage yet, probably won't deal with fire or gas this time
