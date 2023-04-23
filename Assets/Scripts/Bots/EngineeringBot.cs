@@ -3,6 +3,7 @@ using System.Collections;
 using System.Collections.Generic;
 using System.Security.Permissions;
 using UnityEngine;
+using UnityEngine.XR;
 
 public class EngineeringBot : GenericBot
 {
@@ -41,6 +42,8 @@ public class EngineeringBot : GenericBot
         // engineering bots profession is engineering, they can work on engineering modules well, but not other actions
         athletics = NON_PROFESSION_SKILL_VALUE;
         engineering = PROFESSION_SKILL_VALUE;
+        myType = BotType.ENGINEERING;
+
 
     } // end Start
 
@@ -67,6 +70,7 @@ public class EngineeringBot : GenericBot
 
         // default action will be to wait
         actionToTake = EngineerActions.WAIT;
+        moduleToActOn = null;
 
         // booleans for decision making
         bool brokenModule = false;
@@ -97,6 +101,10 @@ public class EngineeringBot : GenericBot
         {
             moduleToActOn = moduleNeedingRepairs;
             actionToTake = EngineerActions.REPAIR;
+        }
+        else if (actionToTake == EngineerActions.WAIT)
+        {
+            moduleToActOn = null;
         }
 
         // pause for a bit then move on (eventually will remove this when it is a turn based game)
@@ -150,7 +158,8 @@ public class EngineeringBot : GenericBot
                     GeneratedShip.ShipPowerAreas areaToAdjust = myShip.energyUpdateQueue.Dequeue();
 
                     myShip.shipManagerScript.UpdateEnergy(myShip.shipID, (int)areaToAdjust, powerToAdjust);
-                    Debug.Log("Engines pumped successfully, added " + powerToAdjust + " power to " + areaToAdjust.ToString() + "!");
+                    myShip.shipManagerScript.UpdateBotStatusText("Engines pumped successfully, added " + powerToAdjust + " power to " + areaToAdjust.ToString() + "!");
+                    //Debug.Log("Engines pumped successfully, added " + powerToAdjust + " power to " + areaToAdjust.ToString() + "!");
                 }
 
                 // used marker is added on success or failure
@@ -167,11 +176,7 @@ public class EngineeringBot : GenericBot
 
             case EngineerActions.REPAIR:
                 // attempt a repair
-                if (PerformActionCheck(REPAIR_DEFAULT_DIFFICULTY - engineering))
-                {
-                    // repair succeeded so remove broken from the module
-                    moduleToActOn.RepairModule();
-                }
+                AttemptRepair(moduleToActOn);
                 break;
 
             default:
@@ -306,7 +311,8 @@ public class EngineeringBot : GenericBot
         {
             myShip.shipManagerScript.UpdateEnergy(myShip.shipID, (int)areaToAdjust, powerToAdjust);
             myShip.shipManagerScript.UpdateEnergy(myShip.shipID, (int)areaToTake, -powerToAdjust);
-            Debug.Log(powerToAdjust + " power transfered from " + areaToTake.ToString() + " to " + areaToAdjust.ToString() + "!");
+            myShip.shipManagerScript.UpdateBotStatusText(powerToAdjust + " power transfered from " + areaToTake.ToString() + " to " + areaToAdjust.ToString() + "!");
+            //Debug.Log(powerToAdjust + " power transfered from " + areaToTake.ToString() + " to " + areaToAdjust.ToString() + "!");
         }
 
     } // end TransferPowerLevels

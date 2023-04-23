@@ -32,6 +32,8 @@ public class GenericBot : MonoBehaviour
     public static int ADD_OR_USED_MULTIPLIER = 3;                   // the difficulty multiplier for each used marker on a module
     public static int MAX_DIFFICULTY_TO_TEST = 9;                   // the largest difficulty a bot will test against
     public static int MIN_VALUE_TO_ADD_EXTRA = 6;                   // the minimum level to try for moving/pumping more than 1 level
+    public static int MAX_SPEED = 5;                                // the maximum safe speed for the ship
+    public static int SINGLE_DIRECTION_CHANGE = 90;//60;            // each change in direction adds difficulty, one change is 90 degrees (hex would be 60)
     public static int REPAIR_DEFAULT_DIFFICULTY = 11;
     public const int NUM_DIE_SIDES = 6;
 
@@ -41,6 +43,7 @@ public class GenericBot : MonoBehaviour
     // protected values used by this class and its sub-classes 
     // TODO: if we need these outward facing, then make public
     protected GeneratedShip myShip;                                 // a link back to the ship we are tied to
+    protected BotType myType;
     protected int athletics;                                        // used for movement
     protected int combat;                                           // used for combat - weapons officer profession
     protected int engineering;                                      // used for combat - engineering officer profession
@@ -66,6 +69,7 @@ public class GenericBot : MonoBehaviour
         engineering = NON_PROFESSION_SKILL_VALUE;
         piloting = NON_PROFESSION_SKILL_VALUE;
         science = NON_PROFESSION_SKILL_VALUE;
+        myType = BotType.OPERATIONS;
 
     } // end Start
 
@@ -165,14 +169,22 @@ public class GenericBot : MonoBehaviour
         // if the difficulty is above 2 x NUM_DIE_SIDES it fails automatically
         if (difficulty > (2 * NUM_DIE_SIDES))
         {
+            myShip.shipManagerScript.UpdateBotRollText(this.myType + " had a automatic failure");
             return false;
+        }
+        else if (difficulty < 2)
+        {
+            myShip.shipManagerScript.UpdateBotRollText(this.myType + " had a automatic success");
+            return true;
         }
 
         // roll the die here using random (will eventually pause game and roll die in game)
         // TODO: Display result and difficulty to screen
         int checkResult = RollDie() + RollDie();
 
-        Debug.Log("Bot performed a check: " +  checkResult + " vs. difficulty of " + difficulty);
+        myShip.shipManagerScript.UpdateBotRollText("Bot performed a check: " + checkResult + " vs. difficulty of " + difficulty);
+
+        //Debug.Log("Bot performed a check: " +  checkResult + " vs. difficulty of " + difficulty);
         return (checkResult >= difficulty);
 
     } // PerformActionCheck
@@ -202,6 +214,21 @@ public class GenericBot : MonoBehaviour
         return currentDifficultyLevel;
 
     } // end AttemptHigherDifficulty
+
+    /// <summary>
+    /// Attempts to repair the given module
+    /// </summary>
+    /// <param name="moduleToActOn">The module to repair</param>
+    protected void AttemptRepair(RoomInfo moduleToActOn)
+    {
+        // attempt a repair
+        if (PerformActionCheck(REPAIR_DEFAULT_DIFFICULTY - engineering))
+        {
+            // repair succeeded so remove broken from the module
+            moduleToActOn.RepairModule();
+        }
+
+    } //  AttemptRepair
 
     /// <summary>
     /// Runs a generic idle state where it waits for a second before seting up a move state

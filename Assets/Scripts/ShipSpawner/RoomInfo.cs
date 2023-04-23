@@ -19,6 +19,7 @@ public class RoomInfo
     private Vector3 roomWorldPos;
     private int numUsedMarkers = 0;
     private bool broken = false;
+    private bool occupied = false;
 
     /// <summary>
     /// the constructor for this class
@@ -26,11 +27,11 @@ public class RoomInfo
     /// <param name="roomName">The name of the room type</param>
     /// <param name="roomType">The room type</param>
     /// <param name="roomTiles">The room tile layout</param>
-    public RoomInfo(string roomName, RoomType roomType, RoomFacing roomfacing, ModuleType moduleType, RoomTiles[,] roomTiles, bool externalFacing)
+    public RoomInfo(string roomName, RoomType roomType, RoomFacing roomFacing, ModuleType moduleType, RoomTiles[,] roomTiles, bool externalFacing)
     {
         this.roomName = roomName;
         this.roomType = roomType;
-        this.roomFacing = roomfacing;
+        this.roomFacing = roomFacing;
         this.moduleType = moduleType;
         this.roomTiles = roomTiles;
         this.externalFacing = externalFacing;
@@ -153,5 +154,24 @@ public class RoomInfo
         broken = false;
 
     } // end RepairModule
+
+    /// <summary>
+    /// Checks to see if this module already has a bot in it (for larger ships with other bots that need placing)
+    /// </summary>
+    /// <returns>true if a bot has bee instantiated in this module, false otherwise</returns>
+    public bool IsOccupied()
+    { 
+        return occupied; 
+
+    } // end IsOccupied
+
+    /// <summary>
+    /// Sets this module as occupied
+    /// </summary>
+    public void SetOccupied()
+    {
+        occupied = true;
+
+    } // end SetOccupied
 
 }

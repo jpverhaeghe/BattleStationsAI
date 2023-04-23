@@ -19,6 +19,7 @@ public class ScienceBot : GenericBot
         // science bots profession is science, they can work on science modules well, but not other actions
         athletics = NON_PROFESSION_SKILL_VALUE;
         science = PROFESSION_SKILL_VALUE;
+        myType = BotType.SCIENCE;
 
     } // end Start
 

@@ -2,6 +2,7 @@ using AlanZucconi.AI.PF;
 using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
+using UnityEngine.XR;
 
 public class SecurityBot : GenericBot
 {
@@ -42,6 +43,7 @@ public class SecurityBot : GenericBot
         // security bots profession is combat, they can work on combat modules and general combat well, but not other actions
         athletics = NON_PROFESSION_SKILL_VALUE;
         combat = PROFESSION_SKILL_VALUE;
+        myType = BotType.SECURITY;
 
     } // end Start
 
@@ -114,7 +116,8 @@ public class SecurityBot : GenericBot
 
         // else request energy if we are not firing and are not at our best power for weapons
         // (Cannon hullDamage is more effective with more power)
-        if (!isFiring && (currentShipWeaponsLevel < MAX_POWER_LEVEL_TO_REQUEST))
+        if (!isFiring && (currentShipWeaponsLevel < MAX_POWER_LEVEL_TO_REQUEST) &&
+            (currentShipWeaponsLevel < GeneratedShip.MAX_ENERGY_LEVEL))
         {
             actionToTake = SecurityActions.REQUEST_WEAPON_POWER;
 
@@ -128,6 +131,11 @@ public class SecurityBot : GenericBot
         {
             moduleToActOn = moduleNeedingRepairs;
             actionToTake = SecurityActions.REPAIR;
+            nextState = BotStates.MOVE;
+        }
+        else if (actionToTake == SecurityActions.WAIT)
+        {
+            moduleToActOn = null;
         }
 
         // pause for a bit then move on (eventually will remove this when it is a turn based game)
@@ -183,10 +191,13 @@ public class SecurityBot : GenericBot
                     int damage = GetCannonDamage();
                     myShip.shipManagerScript.botTargetPractice.hullDamage += damage;
                     myShip.shipManagerScript.botTargetPractice.shieldLevel -= 1;
-
-                    Debug.Log("Cannon fired with success and did " + damage + " damage!");
+                    if (myShip.shipManagerScript.botTargetPractice.shieldLevel < 0)
+                        myShip.shipManagerScript.botTargetPractice.shieldLevel = 0;
+                    myShip.shipManagerScript.UpdateBotStatusText("Cannon fired with success and did " + damage + " damage!");
+                    //Debug.Log("Cannon fired with success and did " + damage + " damage!");
                 }
 
+                // used marker is added on success or failure
                 moduleToActOn.AddUsedMarkers(1);
                 myShip.shipManagerScript.UpdateEnergy(myShip.shipID, (int)GeneratedShip.ShipPowerAreas.WEAPONS, -1);
                 break;
@@ -202,33 +213,32 @@ public class SecurityBot : GenericBot
                 {
                     myShip.shipManagerScript.botTargetPractice.hullDamage += hullDamage;
                     myShip.shipManagerScript.botTargetPractice.shieldLevel -= 1;
-
-                    Debug.Log("Missile fired with success and did " + hullDamage + " damage!");
+                    if (myShip.shipManagerScript.botTargetPractice.shieldLevel < 0)
+                        myShip.shipManagerScript.botTargetPractice.shieldLevel = 0;
+                    myShip.shipManagerScript.UpdateBotStatusText("Missile fired with success and did " + hullDamage + " damage!");
+                    //Debug.Log("Missile fired with success and did " + hullDamage + " damage!");
                 }
                 // if a missile firing fails, then it does damage to our ship!
                 else
                 {
                     //myShip.hullDamage += hullDamage;
                     myShip.shipManagerScript.UpdateHullDamage(myShip.shipID, hullDamage);
-                    Debug.Log("!!!Missile faild to fire, it exploded and did " + hullDamage + " damage to your ship!!!");
+                    myShip.shipManagerScript.UpdateBotStatusText("!!!Missile faild to fire, it exploded and did " + hullDamage + " damage to your ship!!!");
+                    //Debug.Log("!!!Missile faild to fire, it exploded and did " + hullDamage + " damage to your ship!!!");
                 }
 
-                myShip.shipManagerScript.UpdateEnergy(myShip.shipID, (int)GeneratedShip.ShipPowerAreas.WEAPONS, -1);
+                // used marker is added on success or failure
                 moduleToActOn.AddUsedMarkers(1);
+                myShip.shipManagerScript.UpdateEnergy(myShip.shipID, (int)GeneratedShip.ShipPowerAreas.WEAPONS, -1);
                 break;
 
             case SecurityActions.REQUEST_WEAPON_POWER:
-                //myShip.energySystemRequests[(int)GeneratedShip.ShipPowerAreas.WEAPONS] = true;
                 myShip.energyUpdateQueue.Enqueue(GeneratedShip.ShipPowerAreas.WEAPONS);
                 break;
 
             case SecurityActions.REPAIR:
                 // attempt a repair
-                if (PerformActionCheck(REPAIR_DEFAULT_DIFFICULTY - engineering))
-                {
-                    // repair succeeded so remove broken from the module
-                    moduleToActOn.RepairModule();
-                }
+                AttemptRepair(moduleToActOn);
                 break;
 
             default:
@@ -262,6 +272,35 @@ public class SecurityBot : GenericBot
 
             if (fireCannon) 
             {
+                // is the cannon facing the correct direction? (180 arc) compare our cannon facing vs the target location
+                int cannonFacing = (myShip.currentDirection + ((int)cannonToFire.roomFacing * SINGLE_DIRECTION_CHANGE));
+
+                // if the turn would put us over a full cirle, just subtract 360 to get the new facing
+                if (cannonFacing >= 360)
+                {
+                    cannonFacing -= 360;
+                }
+
+                // for now we are using the targetbot, but will need to figure out target ship
+                Vector2Int targetPos = myShip.shipManagerScript.botTargetPractice.mapLocation;
+                bool canTarget = true;
+
+                // since a cannon can shoot in 180 degree arc, we only need to look at one component per facing
+                if (((cannonFacing == 0) && (myShip.mapLocation.x <= targetPos.x)) ||
+                     ((cannonFacing == 90) && (myShip.mapLocation.y <= targetPos.y)) ||
+                     ((cannonFacing == 180) && (myShip.mapLocation.x >= targetPos.x)) ||
+                     ((cannonFacing == 270) && (myShip.mapLocation.y >= targetPos.y)))
+                {
+                    canTarget = false;
+                }
+
+                if (!canTarget)
+                {
+                    // determine facing change
+                    myShip.requestedFacing = SINGLE_DIRECTION_CHANGE;
+                    return isFiring;
+                }
+
                 // difficulty of cannon to succeed is (distance from ship + 2 x otherShipSpeed + 3 x num used markers on cannon - combat skill)
                 actionDifficulty = myShip.shipManagerScript.botTargetPractice.distance;
                 actionDifficulty += myShip.shipManagerScript.botTargetPractice.speed * SPEED_MULTIPLIER;

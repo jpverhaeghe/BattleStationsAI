@@ -1,13 +1,34 @@
+using AlanZucconi.AI.PF;
 using System.Collections;
 using System.Collections.Generic;
+using System.Security.Permissions;
+using Unity.VisualScripting;
 using UnityEngine;
+using UnityEngine.XR;
 
 public class CommandBot : GenericBot
 {
+    private enum CommandActions
+    {
+        ADJUST_SPEED,
+        STEER,
+        //SIDESLIP,
+        REQUEST_HELM_POWER,
+        REPAIR,
+        WAIT
+    }
+
     // constant variables for this bot
     public static RoomData.ModuleType[] modules = { RoomData.ModuleType.Helm };
 
+    private const int MIN_DIST_TO_ADD_SPEED = 6;                    // the distance where we add speed or start braking...
+    private const int MAX_POWER_LEVEL_TO_REQUEST = 4;               // the maximum power level - don't request more when it is here
+
     // private variables
+    private CommandActions actionToTake;
+    private RoomInfo moduleToActOn;
+    private int actionDifficulty;
+    private int adjustmentLevel;
 
     /// <summary>
     /// Start is called before the first frame update
@@ -19,6 +40,7 @@ public class CommandBot : GenericBot
         // command bots profession is piloting, they can control the ship from the helm well, but not other actions
         athletics = NON_PROFESSION_SKILL_VALUE;
         piloting = PROFESSION_SKILL_VALUE;
+        myType = BotType.COMMAND;
 
     } // end Start
 
@@ -30,4 +52,224 @@ public class CommandBot : GenericBot
         base.Update();
 
     } // end Update
+
+    /// <summary>
+    /// Runs a generic idle state where it waits for a second before seting up a move state 
+    /// (where the action choice takes place)
+    /// </summary>
+    /// <returns>yields the system until done with the wait, then finishes the state</returns>
+    protected override IEnumerator PerformIdleState()
+    {
+        // choose the action to take based on several things (using heuristics to choose priority of base options)
+        // - Is the module broken or slagged - repair it (takes precedence if there are no other modules)
+        // - is there a request for power - do in priority (weapons, shields, helm)
+        // - TODO: This bot is better at repairs so it may take other modules into account for reparing later
+
+        // default action will be to wait
+        actionToTake = CommandActions.WAIT;
+        BotStates nextState = BotStates.MOVE;
+        int currentShipHelmLevel = myShip.energySystemLevels[(int)GeneratedShip.ShipPowerAreas.HELM];
+
+        // booleans for decision making
+        bool brokenModule = false;
+        bool isManeurving = false;
+
+        // go through the modules to see if one is working and set the available module types
+        RoomInfo moduleNeedingRepairs = null;
+        int numBrokenModules = 0;
+
+        foreach (RoomInfo module in myModules)
+        {
+            if (module.IsBroken())
+            {
+                brokenModule = true;
+                moduleNeedingRepairs = module;
+                numBrokenModules++;
+            }
+            else
+            {
+                moduleToActOn = module;
+            }
+        }
+
+        isManeurving = CheckManeuvers();
+
+        // else request energy if we are not firing and are not at our best power for weapons
+        // (Cannon hullDamage is more effective with more power)
+        if (!isManeurving && (currentShipHelmLevel < MAX_POWER_LEVEL_TO_REQUEST) &&
+            (currentShipHelmLevel < GeneratedShip.MAX_ENERGY_LEVEL))
+        {
+            actionToTake = CommandActions.REQUEST_HELM_POWER;
+
+            // this action can skip moving, as it is just a request to another ship bot
+            nextState = BotStates.ACTING;
+        }
+
+        // regardless of previous actions, all modules are broken or
+        // any modules are broken and we are not adjusting power, switch to repair
+        if ((numBrokenModules >= myModules.Count) || (!isManeurving && brokenModule))
+        {
+            moduleToActOn = moduleNeedingRepairs;
+            actionToTake = CommandActions.REPAIR;
+        }
+        else if (actionToTake == CommandActions.WAIT)
+        {
+            moduleToActOn = null;
+        }
+
+        // pause for a bit then move on (eventually will remove this when it is a turn based game)
+        runningState = true;
+        yield return new WaitForSeconds(1);
+        currentState = nextState;
+        runningState = false;
+
+    } // end PerformIdleState
+
+    /// <summary>
+    /// Finds a path to the next module terminal location for the given module
+    /// </summary>
+    /// <param name="moduleToMoveTo">The module to search for a terminal for pathing</param>
+    protected override void FindNextMoveLocation()
+    {
+        // if we have an module to move to based on a selected action, move there
+        if (moduleToActOn != null)
+        {
+            // get the next terminal location for the given module
+            Vector2Int moveLocation = moduleToActOn.GetTerminalLoacation(currentTerminal);
+
+            // find the path to the given destination
+            currentPath = myShip.shipPathingSystem.BreadthFirstSearch(GetGridPos(), moveLocation);
+
+            // set it to move to the new location
+            currentState = BotStates.MOVING;
+        }
+        // otherwise just wander from termninal to terminal (may not need this - perhaps better to just go back to idle)
+        else
+        {
+            base.FindNextMoveLocation();
+        }
+
+    } // end FindNextMoveLocation
+
+    /// <summary>
+    /// Will perform a given action at the location
+    /// - will need to set this up in idle perhaps - using heuristics to determine the best option for the bot at that time
+    /// </summary>
+    /// <returns>yields the system until done with the wait, then finishes the state<</returns>
+    protected override IEnumerator DoAction()
+    {
+        // Do the selected action from previous Idle state
+        switch (actionToTake)
+        {
+            case CommandActions.ADJUST_SPEED:
+                // Attempt to pump the engines and apply the power first request in the queue
+                if (PerformActionCheck(actionDifficulty))
+                {
+                    myShip.shipManagerScript.UpdateSpeed(myShip.shipID, adjustmentLevel);
+                    myShip.shipManagerScript.UpdateBotStatusText("Speed successfully adjusted by " + adjustmentLevel);
+                    //Debug.Log("Speed successfully adjusted by " + adjustmentLevel);
+                }
+
+                // used marker is added on success or failure - no used markers on the helm
+                //moduleToActOn.AddUsedMarkers(1);
+                myShip.shipManagerScript.UpdateEnergy(myShip.shipID, (int)GeneratedShip.ShipPowerAreas.HELM, -1);
+                break;
+
+            case CommandActions.STEER:
+                // if the action succeeds, find the area to transfer to and pull from any of the others (based on bigger levels)
+                if (PerformActionCheck(actionDifficulty))
+                {
+                    myShip.shipManagerScript.UpdateShipDirection(myShip.shipID, adjustmentLevel);
+                    myShip.shipManagerScript.UpdateBotStatusText("Direction successfully adjusted by " + adjustmentLevel);
+                    myShip.requestedFacing = -1;
+                    //Debug.Log("Direction successfully adjusted by " + adjustmentLevel);
+                }
+
+                // used marker is added on success or failure - no used markers on the helm
+                //moduleToActOn.AddUsedMarkers(1);
+                myShip.shipManagerScript.UpdateEnergy(myShip.shipID, (int)GeneratedShip.ShipPowerAreas.HELM, -1);
+                break;
+
+            case CommandActions.REQUEST_HELM_POWER:
+                myShip.energyUpdateQueue.Enqueue(GeneratedShip.ShipPowerAreas.HELM);
+                break;
+
+            case CommandActions.REPAIR:
+                // attempt a repair
+                AttemptRepair(moduleToActOn);
+                break;
+
+            default:
+                break;
+        }
+
+        runningState = true;
+        yield return new WaitForSeconds(0.5f);
+        currentState = BotStates.IDLE;
+        runningState = false;
+
+    } // end DoAction
+
+    // Checks to see if there are maneuvers available and acts on them as it see fit
+    private bool CheckManeuvers()
+    {
+        bool isManeuvering = false;
+
+        // all maneuvers are difficulty (2x Ship Size + 2x Speed - Piloting Skill) 
+        // helm doesn't have use markers but will have OOC penalties (not using for this project)
+        actionDifficulty = (2 * myShip.shipSize) + (2 * myShip.currentSpeed);
+        actionDifficulty -= piloting;
+
+        // check to see if we are facing our target first, if not, time to turn
+        Vector2Int targetPos = myShip.shipManagerScript.botTargetPractice.mapLocation;
+        bool facingTarget = false;
+
+        // check to see if it is 
+        if (((myShip.currentDirection == 0) && (myShip.mapLocation.x < targetPos.x)) ||
+            ((myShip.currentDirection == 90) && (myShip.mapLocation.y < targetPos.y)) ||
+            ((myShip.currentDirection == 180) && (myShip.mapLocation.x > targetPos.x)) ||
+            ((myShip.currentDirection == 270) && (myShip.mapLocation.y > targetPos.y)))
+        {
+            facingTarget = true;
+        }
+
+        if (!facingTarget)
+        {
+            isManeuvering = true;
+            actionToTake = CommandActions.STEER;
+            adjustmentLevel = SINGLE_DIRECTION_CHANGE;
+        }
+        // first off, check the distance from the other ship. We can't shoot it effectively if we aren't close enough
+        else if (myShip.shipManagerScript.botTargetPractice.distance != MIN_DIST_TO_ADD_SPEED)
+        {
+            if ((myShip.shipManagerScript.botTargetPractice.distance > MIN_DIST_TO_ADD_SPEED) &&
+                 (myShip.currentSpeed < MAX_SPEED))
+            {
+                isManeuvering = true;
+                actionToTake = CommandActions.ADJUST_SPEED;
+                adjustmentLevel = 1;
+            }
+
+            if ( (myShip.shipManagerScript.botTargetPractice.distance < MIN_DIST_TO_ADD_SPEED) && 
+                 (myShip.currentSpeed > 0))
+            {
+                isManeuvering = true;
+                actionToTake = CommandActions.ADJUST_SPEED;
+                adjustmentLevel = -1;
+            }
+
+            // potential to adjust further but with OOC penalties bots play it safe
+        }
+
+        // speed comes first, if not, then check to see if a turn was requested
+        if (!isManeuvering && (myShip.requestedFacing != -1))
+        {
+            isManeuvering = true;
+            actionToTake = CommandActions.STEER;
+            adjustmentLevel = myShip.requestedFacing;
+        }
+
+        return isManeuvering;
+
+    } // end CheckManeuvers
 }

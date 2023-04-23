@@ -79,6 +79,7 @@ public class GameManager : MonoBehaviour
 
         // TODO: Move ships based on current speeds and direction
         // - for now leaving as stationary ships ala FTL
+        shipManager.MoveShips();
 
         // TODO: Move Missiles
 
@@ -90,7 +91,7 @@ public class GameManager : MonoBehaviour
         // - for now no enemy bots, just logic to fire at us if we are too close
 
         // Steady ship
-        //shipManager.SteadyShips();
+        shipManager.SteadyShips();
 
         // TODO: Deal with fire, gas and life support issues
         // - no module damage yet, probably won't deal with fire or gas this time

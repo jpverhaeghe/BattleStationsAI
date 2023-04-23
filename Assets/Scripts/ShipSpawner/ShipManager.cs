@@ -1,9 +1,11 @@
 ﻿using AlanZucconi.AI.PF;
+using System;
 using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
 using TMPro;
 using UnityEngine;
+using UnityEngine.XR;
 using static RoomData;
 
 public class ShipManager : MonoBehaviour
@@ -16,11 +18,14 @@ public class ShipManager : MonoBehaviour
         public int speed;                   // the speed of a ship can be 0 to 5
         public int shieldLevel;             // the shield level of this ship
         public int direction;               // 360 with positive z 0, turning is in 60 degree chunks (cartesian)
+
+        public Vector2Int mapLocation;
     }
 
-    public const int ENEMY_SHIP_MAX_HULL_DAMAGE = 100;
+    public static int ENEMY_SHIP_MAX_HULL_DAMAGE = 100;
+    public static int MAX_HEX_RANGE = 50;
 
-    private string[] energyLabels = { "Helm", "Weapons", "Shields"};
+    private string[] energyLabels = { "Helm", "Guns", "Shld"};
 
     // Serialized fields used by this script
     [Header("Ship Generation Elements")]
@@ -31,15 +36,24 @@ public class ShipManager : MonoBehaviour
 
     // TODO: Think of a way to re-use these for each ship as they go through the AI
     // - perhaps update a text box with a name of the ship above them
-    [Header("HUD Elements to keep track of ship data")]
-    [SerializeField] TMP_Text shipSpeedText;
+    [Header("HUD Elements to keep track of bot status")]
+    [SerializeField] TMP_Text botRollText;
+    [SerializeField] TMP_Text botStatusText;
+
+    [Header("HUD Elements to keep track of hero ship data")]
+    [SerializeField] TMP_Text shipDirectionText;
     [SerializeField] TMP_Text shipDamageText;
+    [SerializeField] TMP_Text shipSpeedText;
+    [SerializeField] TMP_Text shipOOCText;
     [SerializeField] TMP_Text[] shipEnergyText;
 
     [Header("HUD Elements for enemy ship")]
-    [SerializeField] TMP_Text enemySpeedText;
+    [SerializeField] TMP_Text enemyDirectionText;
     [SerializeField] TMP_Text enemyDamageText;
+    [SerializeField] TMP_Text enemySpeedText;
+    [SerializeField] TMP_Text enemyOOCText;
     [SerializeField] TMP_Text[] enemyEnergyText;
+    [SerializeField] TMP_Text enemyDistText;
 
     public EnemyShip botTargetPractice = new EnemyShip();
 
@@ -62,20 +76,33 @@ public class ShipManager : MonoBehaviour
         // assigns the RoomSpawner script for later use
         roomSpawner = gameObject.GetComponent<RoomSpawner>();
 
-        botTargetPractice.distance = 6;             // ships are stationary for now - this is missile hits in one round distance
+        botTargetPractice.distance = 15;             // ships are stationary for now - this is missile hits in three round distance (if I add missiles)
         botTargetPractice.hullDamage = 0;
         botTargetPractice.direction = 180;
         botTargetPractice.speed = 0;
         botTargetPractice.shieldLevel = 2;
+
+        botTargetPractice.mapLocation = new Vector2Int(10, 15);
 
     } // end Awake
 
     // Temporary to update enemy ship stats. Will eventually use ship systems for second ship
     private void Update()
     {
-        enemySpeedText.text = "Speed = " + botTargetPractice.speed;
-        enemyDamageText.text = "Damage = " + botTargetPractice.hullDamage;
-        enemyEnergyText[(int)GeneratedShip.ShipPowerAreas.SHIELDS].text = "Shileds " + botTargetPractice.shieldLevel;
+        enemySpeedText.text = "Spd = " + botTargetPractice.speed;
+        enemyDamageText.text = "Dmg = " + botTargetPractice.hullDamage;
+        enemyEnergyText[(int)GeneratedShip.ShipPowerAreas.SHIELDS].text = "Shld = " + botTargetPractice.shieldLevel;
+
+        int distance = botTargetPractice.distance;
+
+        if (shipObjects.Count > 0)
+        {
+            Vector2Int currentShipLoc = shipObjects[0].GetComponent<GeneratedShip>().mapLocation;
+            distance = GetDistanceBetweenShips(currentShipLoc, botTargetPractice.mapLocation);
+            botTargetPractice.distance = distance;
+        }
+
+        enemyDistText.text = "Enemy Dist: " + distance;
     }
 
     /// <summary>
@@ -111,16 +138,40 @@ public class ShipManager : MonoBehaviour
     } // DoPhase1Setup
 
     /// <summary>
+    /// Move the generated ships along their direction in the hypothetical map
+    /// TODO: Make the world wrap around or leave it or maybe not (ships always chase each other)
+    /// </summary>
+    public void MoveShips()
+    {
+        // go through all the ships and move them forward (if at edges leave them there)
+        foreach (GameObject ship in shipObjects)
+        {
+            GeneratedShip shipScript = ship.GetComponent<GeneratedShip>();
+
+            shipScript.MoveShip();
+
+            if (shipScript.shipID == 0) {
+                // temporary for bot practice - move the enemy closer
+                botTargetPractice.distance -= shipScript.currentSpeed;
+
+                botTargetPractice.distance = Math.Abs(botTargetPractice.distance);
+            }
+        }
+
+
+    } // end MoveShips
+
+    /// <summary>
     /// The stead the ships part of a phase removes one OOC from each ship, so just go through the list
     /// </summary>
-    /*public void SteadyShips()
+    public void SteadyShips()
     {
         for (int i = 0; i < shipObjects.Count; i++)
         {
             UpdateOutOfControl(i, -1);
         }
 
-    } // SteadyShips*/
+    } // SteadyShips
 
     /// <summary>
     /// Performs the necessary adjustments for a ship at the end of the round
@@ -146,7 +197,67 @@ public class ShipManager : MonoBehaviour
     } // ShipRoundCleanUp
 
     /// <summary>
-    /// Updates the speed with to the new value, never less than zero
+    /// Updates the direction of the ship with to the new value
+    /// </summary>
+    /// <param name="shipID">The index of the ship that is being adjusted in the list</param>
+    /// <param name="directionChange">The value to change the hull damage by</param>
+    public void UpdateShipDirection(int shipID, int directionChange)
+    {
+        // only adjust if the ship id is in the list, otherwise it is invalid
+        if ((shipID >= 0) && (shipID < shipObjects.Count))
+        {
+            shipObjects[shipID].GetComponent<GeneratedShip>().UpdateShipDirection(directionChange);
+
+            // update the HUD text if this is the hero ship (ship ID 0)
+            if (shipID == 0)
+            {
+                shipDirectionText.text = "Dir = " + shipObjects[shipID].GetComponent<GeneratedShip>().currentDirection.ToString();
+            }
+            // or enemy ship (ship ID 1)
+            else if (shipID == 1)
+            {
+                enemyDirectionText.text = "Dir = " + shipObjects[shipID].GetComponent<GeneratedShip>().currentDirection.ToString();
+            }
+        }
+        else
+        {
+            Debug.Log("ShipManager->UpdateShipDirection: ShipID " + shipID + " does not exist");
+        }
+
+    } // end UpdateShipDirection
+
+    /// <summary>
+    /// Updates the hull damage with to the new value, never less than zero
+    /// </summary>
+    /// <param name="shipID">The index of the ship that is being adjusted in the list</param>
+    /// <param name="hullDamage">The value to change the hull damage by</param>
+    public void UpdateHullDamage(int shipID, int hullDamage)
+    {
+        // only adjust if the ship id is in the list, otherwise it is invalid
+        if ((shipID >= 0) && (shipID < shipObjects.Count))
+        {
+            shipObjects[shipID].GetComponent<GeneratedShip>().UpdateHullDamage(hullDamage);
+
+            // update the HUD text if this is the hero ship (ship ID 0)
+            if (shipID == 0)
+            {
+                shipDamageText.text = "Dmg = " + shipObjects[shipID].GetComponent<GeneratedShip>().hullDamage.ToString();
+            }
+            // or enemy ship (ship ID 1)
+            else if (shipID == 1)
+            {
+                enemyDamageText.text = "Dmg = " + shipObjects[shipID].GetComponent<GeneratedShip>().hullDamage.ToString();
+            }
+        }
+        else
+        {
+            Debug.Log("ShipManager->UpdateHullDamage: ShipID " + shipID + " does not exist");
+        }
+
+    } // end UpdateHullDamage
+
+    /// <summary>
+    /// Updates the speed with to the new value
     /// TODO: When speed is over 4 - the ship should take damage
     /// </summary>
     /// <param name="shipID">The index of the ship that is being adjusted in the list</param>
@@ -161,7 +272,12 @@ public class ShipManager : MonoBehaviour
             // update the HUD text if this is the hero ship (ship ID 0)
             if (shipID == 0)
             {
-                shipSpeedText.text = "Speed = " + shipObjects[shipID].GetComponent<GeneratedShip>().currentSpeed.ToString();
+                shipSpeedText.text = "Spd = " + shipObjects[shipID].GetComponent<GeneratedShip>().currentSpeed.ToString();
+            }
+            // or enemy ship (ship ID 1)
+            else if (shipID == 1)
+            {
+                enemySpeedText.text = "Spd = " + shipObjects[shipID].GetComponent<GeneratedShip>().currentSpeed.ToString();
             }
         }
         else
@@ -172,21 +288,26 @@ public class ShipManager : MonoBehaviour
     } // end UpdateSpeed
 
     /// <summary>
-    /// Updates the Out of Control factor (OOC) with to the new value, never less than zero
+    /// Updates the OOC level to the new value
     /// </summary>
     /// <param name="shipID">The index of the ship that is being adjusted in the list</param>
-    /// <param name="hullDamage">The value to change the hull damage by</param>
-    public void UpdateHullDamage(int shipID, int hullDamage)
+    /// <param name="oocChange">The value to change the hull damage by</param>
+    public void UpdateOutOfControl(int shipID, int oocChange)
     {
         // only adjust if the ship id is in the list, otherwise it is invalid
         if ((shipID >= 0) && (shipID < shipObjects.Count))
         {
-            shipObjects[shipID].GetComponent<GeneratedShip>().UpdateHullDamage(hullDamage);
+            shipObjects[shipID].GetComponent<GeneratedShip>().UpdateOutOfControl(oocChange);
 
             // update the HUD text if this is the hero ship (ship ID 0)
             if (shipID == 0)
             {
-                shipDamageText.text = "Damage = " + shipObjects[shipID].GetComponent<GeneratedShip>().hullDamage.ToString();
+                shipOOCText.text = "OOC = " + shipObjects[shipID].GetComponent<GeneratedShip>().outOfControlLevel.ToString();
+            }
+            // or enemy ship (ship ID 1)
+            else if (shipID == 1)
+            {
+                enemyOOCText.text = "OOC = " + shipObjects[shipID].GetComponent<GeneratedShip>().outOfControlLevel.ToString();
             }
         }
         else
@@ -197,7 +318,7 @@ public class ShipManager : MonoBehaviour
     } // end UpdateHullDamage
 
     /// <summary>
-    /// Updates the helm energy level with to the new value, never less than zero
+    /// Updates the helm energy level with to the new value
     /// </summary>
     /// <param name="shipID">The index of the ship that is being adjusted in the list</param>
     /// <param name="energySystem">The energy system to update</param>
@@ -212,8 +333,13 @@ public class ShipManager : MonoBehaviour
             // update the HUD text if this is the hero ship (ship ID 0)
             if (shipID == 0)
             {
-
                 shipEnergyText[energySystem].text = energyLabels[energySystem] + " = " + 
+                    shipObjects[shipID].GetComponent<GeneratedShip>().energySystemLevels[energySystem].ToString();
+            }
+            // or enemy ship (ship ID 1)
+            else if (shipID == 1)
+            {
+                enemyEnergyText[energySystem].text = energyLabels[energySystem] + " = " +
                     shipObjects[shipID].GetComponent<GeneratedShip>().energySystemLevels[energySystem].ToString();
             }
         }
@@ -327,6 +453,32 @@ public class ShipManager : MonoBehaviour
         currentSpawnShipSize = size;
 
     } // end SetShipSize
+
+    /// <summary>
+    /// Debug system to show what bots are doing, may change rapidly
+    /// </summary>
+    /// <param name="textToDisplay">text to update</param>
+    public void UpdateBotRollText(string textToDisplay)
+    {
+        botRollText.text = textToDisplay;
+
+    }// end UpdateBotRollText
+
+    /// <summary>
+    /// Debug system to show what bots are doing, may change rapidly
+    /// </summary>
+    /// <param name="textToDisplay">text to update</param>
+    public void UpdateBotStatusText(string textToDisplay)
+    {
+        botStatusText.text = textToDisplay;
+
+    }// end UpdateBotStatusText
+
+    public int GetDistanceBetweenShips(Vector2Int shipA, Vector2Int shipB)
+    {
+        int distance = (int)Math.Abs(Math.Sqrt(Math.Pow((shipB.x - shipA.x), 2) + Math.Pow((shipB.y - shipA.y), 2)));
+        return distance;
+    }
 
     /// <summary>
     /// Build the ship using the room information and positional values in game

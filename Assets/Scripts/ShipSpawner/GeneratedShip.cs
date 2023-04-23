@@ -16,12 +16,13 @@ public class GeneratedShip : MonoBehaviour
     }
 
     // constants for this script
+    public static int MAX_ENERGY_LEVEL = 6;             // the maximum level an energy system can reach
     private const float TILE_CENTER_OFFSET = 0.5f;
     private const int NUM_BOTS_PER_LIFE_SUPPORT = 4;
     private const int BOT_Y_OFFSET = 1;
 
     // public variables used by the ship manager for keeping track of the current ships state
-    public ShipManager shipManagerScript;              // a link back to the ship manager so we can have access to the bot prefabs
+    public ShipManager shipManagerScript;               // a link back to the ship manager so we can have access to the bot prefabs
     public RoomInfo[,] shipLayout;                      // the ship layout using room types
     public Grid2D shipPathingSystem;                    // the grid for the pathing system used by bots for this ship
     public Vector3 shipWorldOrigin;                     // the world position where the top left corner of the ship layout begins (for pathfinding)
@@ -30,8 +31,11 @@ public class GeneratedShip : MonoBehaviour
     public int shipSize;                                // used to store the current generated ship size
     public int numLifeSupports;                         // exposing this so we don't have to re-count later
 
+    public Vector2Int mapLocation;                      // the map location of this ship for determinig distance, facing etc.
     public int currentSpeed;                            // the current speed of the ship
-    //public int outOfControlLevel;                       // how out of control the ship is, affects bot skills
+    public int currentDirection;                        // the heading of the current ship - used for facing of cannons
+    public int requestedFacing;                         // used for targeting (-1 means no request to turn)
+    public int outOfControlLevel;                       // how out of control the ship is, affects bot skills
 
     public int hullDamage;                              // the ships hull integrity
 
@@ -64,9 +68,12 @@ public class GeneratedShip : MonoBehaviour
         this.shipID = shipID;
         this.shipSize = shipSize;
 
-        // set up base stats
+        // set up base stats (in middle of imaginary map, facing up at speed 1
+        mapLocation = new Vector2Int(ShipManager.MAX_HEX_RANGE/2, ShipManager.MAX_HEX_RANGE / 2);
         currentSpeed = 1;
-        //outOfControlLevel = 0;
+        currentDirection = 0;
+        requestedFacing = -1;
+        outOfControlLevel = 0;
         hullDamage = 0;
 
         // set up the energy systems for this ship (using an enum to make easier to manipulate by others)
@@ -86,6 +93,87 @@ public class GeneratedShip : MonoBehaviour
     } // end SetupShip
 
     /// <summary>
+    /// Moves the ship in the direction it is facing, stopping at map edges
+    /// </summary>
+    public void MoveShip()
+    {
+        // get the direction of the ship and convert it to a Vector2Int
+        // can use ints here as we are only on cardinal directions (0, 90, 180 and 270)
+        Vector2Int moveVector = new Vector2Int();
+        // sin 180 is returning 0 when it should be 1, probably rounding error...doing it manually
+        //moveVector.x = (int)Mathf.Cos(currentDirection);
+        //moveVector.y = (int)Mathf.Sin(currentDirection);
+
+        if (currentDirection == 0) { moveVector.x = 1; }
+        else if (currentDirection == 90) { moveVector.y = 1; }
+        else if (currentDirection == 180) { moveVector.x = -1; }
+        else if (currentDirection == 270) { moveVector.y = -1; }
+
+        moveVector *= currentSpeed;
+
+        mapLocation += moveVector;
+
+        // check edge cases
+        if (mapLocation.x < 0)
+        { 
+            mapLocation.x = 0; 
+        }
+
+        if (mapLocation.x > ShipManager.MAX_HEX_RANGE)
+        {
+            mapLocation.x = ShipManager.MAX_HEX_RANGE;
+        }
+
+        if (mapLocation.y < 0)
+        {
+            mapLocation.y = 0;
+        }
+
+        if (mapLocation.y > ShipManager.MAX_HEX_RANGE)
+        {
+            mapLocation.y = ShipManager.MAX_HEX_RANGE;
+        }
+
+    } // end MoveShip
+
+    /// <summary>
+    /// Updates the direction of the ship
+    /// </summary>
+    /// <param name="directionChange">The value to change the direction by</param>
+    public void UpdateShipDirection(int directionChange)
+    {
+        this.currentDirection += directionChange;
+
+        // if we went negative, wrap it back to positive
+        if (this.currentDirection <= 0)
+        {
+            this.currentDirection += 360;
+        }
+        // if it went too positive bring it back around
+        else if (this.currentDirection >= 360)
+        {
+            this.currentDirection -= 360;
+        }
+
+    } // end UpdateShipDirection
+
+    /// <summary>
+    /// Updates the Hull damage
+    /// </summary>
+    /// <param name="hullDamage"></param>
+    public void UpdateHullDamage(int hullDamage)
+    {
+        this.hullDamage += hullDamage;
+
+        // can't have a damage of less than zero (values should be all positive...)
+        if (this.hullDamage < 0)
+        {
+            this.hullDamage = 0;
+        }
+
+    } // end UpdateHullDamage
+
+    /// <summary>
     /// Updates the speed with to the new value, never less than zero
     /// TODO: When speed is over 4 - the ship should take damage
     /// </summary>
@@ -94,7 +182,7 @@ public class GeneratedShip : MonoBehaviour
     {
         currentSpeed += speedChange;
 
-        // can't have a spped of less than zero
+        // can't have a speed of less than zero
         if (currentSpeed < 0)
         {
             currentSpeed = 0;
@@ -105,8 +193,8 @@ public class GeneratedShip : MonoBehaviour
     /// <summary>
     /// Updates the Out of Control factor (OOC) with to the new value, never less than zero
     /// </summary>
-    /// <param name="speedChange">The value to change the OOC by</param>
-    /*public void UpdateOutOfControl(int oocChange)
+    /// <param name="oocChange">The value to change the OOC by</param>
+    public void UpdateOutOfControl(int oocChange)
     {
         outOfControlLevel += oocChange;
 
@@ -116,19 +204,7 @@ public class GeneratedShip : MonoBehaviour
             outOfControlLevel = 0;
         }
 
-    } // end UpdateOutOfControl*/
-
-    public void UpdateHullDamage(int hullDamage)
-    {
-        this.hullDamage += hullDamage;
-
-        // can't have a spped of less than zero
-        if (this.hullDamage < 0)
-        {
-            this.hullDamage = 0;
-        }
-
-    } // end UpdateHullDamage
+    } // end UpdateOutOfControl
 
     /// <summary>
     /// Updates the helm energy level with to the new value, never less than zero
@@ -143,6 +219,10 @@ public class GeneratedShip : MonoBehaviour
         if (energySystemLevels[energySystem] < 0)
         {
             energySystemLevels[energySystem] = 0;
+        }
+        else if (energySystemLevels[energySystem] > MAX_ENERGY_LEVEL)
+        {
+            energySystemLevels[energySystem] = MAX_ENERGY_LEVEL;
         }
 
     } // end UpdateEnergy
@@ -285,6 +365,8 @@ public class GeneratedShip : MonoBehaviour
         {
             startGridPos = startRoom.GetTerminalLoacation(0);
         }
+
+        startRoom.SetOccupied();
 
         return startGridPos;
 
