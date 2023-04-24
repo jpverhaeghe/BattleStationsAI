@@ -36,8 +36,10 @@ public class GeneratedShip : MonoBehaviour
     public int currentDirection;                        // the heading of the current ship - used for facing of cannons
     public int requestedFacing;                         // used for targeting (-1 means no request to turn)
     public int outOfControlLevel;                       // how out of control the ship is, affects bot skills
-
     public int hullDamage;                              // the ships hull integrity
+
+    public bool allScienceBaysBroken;
+    public int numStoredScans;
 
     //public bool[] energySystemRequests;
     public Queue<ShipPowerAreas> energyUpdateQueue;
@@ -75,6 +77,8 @@ public class GeneratedShip : MonoBehaviour
         requestedFacing = -1;
         outOfControlLevel = 0;
         hullDamage = 0;
+        allScienceBaysBroken = false;
+        numStoredScans = 0;
 
         // set up the energy systems for this ship (using an enum to make easier to manipulate by others)
         int energySystemNum = System.Enum.GetNames(typeof(ShipPowerAreas)).Length;
@@ -99,6 +103,7 @@ public class GeneratedShip : MonoBehaviour
     {
         // get the direction of the ship and convert it to a Vector2Int
         // can use ints here as we are only on cardinal directions (0, 90, 180 and 270)
+        // TODO: When moving to HEX areas, direction changes are more complex (turn of 60)
         Vector2Int moveVector = new Vector2Int();
         // sin 180 is returning 0 when it should be 1, probably rounding error...doing it manually
         //moveVector.x = (int)Mathf.Cos(currentDirection);
@@ -213,19 +218,44 @@ public class GeneratedShip : MonoBehaviour
     /// <param name="energySystem">The energy system to update</param>
     public void UpdateEnergy(int energySystem, int energyChange)
     {
-        energySystemLevels[energySystem] += energyChange;
+        // if it is shields and all science bays are broken, don't add power
+        if ((energySystem != (int)ShipPowerAreas.SHIELDS) || !allScienceBaysBroken)
+        {
+            energySystemLevels[energySystem] += energyChange;
 
-        // can't have a spped of less than zero
-        if (energySystemLevels[energySystem] < 0)
-        {
-            energySystemLevels[energySystem] = 0;
-        }
-        else if (energySystemLevels[energySystem] > MAX_ENERGY_LEVEL)
-        {
-            energySystemLevels[energySystem] = MAX_ENERGY_LEVEL;
+            // can't have a spped of less than zero
+            if (energySystemLevels[energySystem] < 0)
+            {
+                energySystemLevels[energySystem] = 0;
+            }
+            else if (energySystemLevels[energySystem] > MAX_ENERGY_LEVEL)
+            {
+                energySystemLevels[energySystem] = MAX_ENERGY_LEVEL;
+            }
         }
 
     } // end UpdateEnergy
+
+    /// <summary>
+    /// Updates the speed with to the new value, never less than zero
+    /// </summary>
+    /// <param name="scansChange">The value to change the speed by</param>
+    public void UpdateNumScans(int scansChange)
+    {
+        numStoredScans += scansChange;
+
+        // can't have a speed of less than zero
+        if (numStoredScans < 0)
+        {
+            numStoredScans = 0;
+        }
+        // cap the top too
+        if (numStoredScans > shipSize)
+        {
+            numStoredScans = shipSize;
+        }
+
+    } // end UpdateNumScans
 
     /// <summary>
     /// Clears all the used markers at the end of each round

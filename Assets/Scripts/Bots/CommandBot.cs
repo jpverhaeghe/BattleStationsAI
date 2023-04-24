@@ -26,8 +26,6 @@ public class CommandBot : GenericBot
 
     // private variables
     private CommandActions actionToTake;
-    private RoomInfo moduleToActOn;
-    private int actionDifficulty;
     private int adjustmentLevel;
 
     /// <summary>
@@ -124,32 +122,6 @@ public class CommandBot : GenericBot
         runningState = false;
 
     } // end PerformIdleState
-
-    /// <summary>
-    /// Finds a path to the next module terminal location for the given module
-    /// </summary>
-    /// <param name="moduleToMoveTo">The module to search for a terminal for pathing</param>
-    protected override void FindNextMoveLocation()
-    {
-        // if we have an module to move to based on a selected action, move there
-        if (moduleToActOn != null)
-        {
-            // get the next terminal location for the given module
-            Vector2Int moveLocation = moduleToActOn.GetTerminalLoacation(currentTerminal);
-
-            // find the path to the given destination
-            currentPath = myShip.shipPathingSystem.BreadthFirstSearch(GetGridPos(), moveLocation);
-
-            // set it to move to the new location
-            currentState = BotStates.MOVING;
-        }
-        // otherwise just wander from termninal to terminal (may not need this - perhaps better to just go back to idle)
-        else
-        {
-            base.FindNextMoveLocation();
-        }
-
-    } // end FindNextMoveLocation
 
     /// <summary>
     /// Will perform a given action at the location

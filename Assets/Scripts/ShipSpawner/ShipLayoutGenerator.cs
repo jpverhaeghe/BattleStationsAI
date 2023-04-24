@@ -83,8 +83,8 @@ public class ShipLayoutGenerator : MonoBehaviour
     /// </summary>
     /// <param name="shipID">The id of the ship being generated</param>
     /// <returns>RoomInfo[,] - the generated layout in a double array format of RoomInfo</returns>
-    public RoomInfo[,] GenerateShipLayout()
-    //public RoomInfo[,] GenerateShipLayout(ShipSize shipType)
+    //public RoomInfo[,] GenerateShipLayout()
+    public RoomInfo[,] GenerateShipLayout(ShipSize shipType)
     {
 
         // TODO: Add race as an option so we can change building based on the rules of each race
@@ -119,8 +119,8 @@ public class ShipLayoutGenerator : MonoBehaviour
         if (numModulesToPlace > 0)
         {
             LogRequiredModuleList();
-            GenerateShipLayout();
-            //GenerateShipLayout(shipType);
+            //GenerateShipLayout();
+            GenerateShipLayout(shipType);
         }
 
         // return the layout generated

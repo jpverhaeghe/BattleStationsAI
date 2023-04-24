@@ -46,6 +46,7 @@ public class ShipManager : MonoBehaviour
     [SerializeField] TMP_Text shipSpeedText;
     [SerializeField] TMP_Text shipOOCText;
     [SerializeField] TMP_Text[] shipEnergyText;
+    [SerializeField] TMP_Text shipScansText;
 
     [Header("HUD Elements for enemy ship")]
     [SerializeField] TMP_Text enemyDirectionText;
@@ -53,6 +54,7 @@ public class ShipManager : MonoBehaviour
     [SerializeField] TMP_Text enemySpeedText;
     [SerializeField] TMP_Text enemyOOCText;
     [SerializeField] TMP_Text[] enemyEnergyText;
+    [SerializeField] TMP_Text enemyScansText;
     [SerializeField] TMP_Text enemyDistText;
 
     public EnemyShip botTargetPractice = new EnemyShip();
@@ -110,8 +112,8 @@ public class ShipManager : MonoBehaviour
     /// </summary>
     public void InitializeShip()
     {
-        GenerateShip();
-        //GenerateShip(ShipLayoutGenerator.ShipSize.Frigate);
+        //GenerateShip();
+        GenerateShip(ShipLayoutGenerator.ShipSize.Frigate);
 
     } // end InitializeShip
 
@@ -315,7 +317,7 @@ public class ShipManager : MonoBehaviour
             Debug.Log("ShipManager->UpdateHullDamage: ShipID " + shipID + " does not exist");
         }
 
-    } // end UpdateHullDamage
+    } // end UpdateOutOfControl
 
     /// <summary>
     /// Updates the helm energy level with to the new value
@@ -351,16 +353,47 @@ public class ShipManager : MonoBehaviour
     } // end UpdateEnergy
 
     /// <summary>
+    /// Updates the speed with to the new value
+    /// TODO: When speed is over 4 - the ship should take damage
+    /// </summary>
+    /// <param name="shipID">The index of the ship that is being adjusted in the list</param>
+    /// <param name="scanChange">The value to change the speed by</param>
+    public void UpdateNumScans(int shipID, int scanChange)
+    {
+        // only adjust if the ship id is in the list, otherwise it is invalid
+        if ((shipID >= 0) && (shipID < shipObjects.Count))
+        {
+            shipObjects[shipID].GetComponent<GeneratedShip>().UpdateNumScans(scanChange);
+
+            // update the HUD text if this is the hero ship (ship ID 0)
+            if (shipID == 0)
+            {
+                shipScansText.text = "Scn = " + shipObjects[shipID].GetComponent<GeneratedShip>().numStoredScans.ToString();
+            }
+            // or enemy ship (ship ID 1)
+            else if (shipID == 1)
+            {
+                enemyScansText.text = "Scn = " + shipObjects[shipID].GetComponent<GeneratedShip>().numStoredScans.ToString();
+            }
+        }
+        else
+        {
+            Debug.Log("ShipManager->UpdateNumScans: ShipID " + shipID + " does not exist");
+        }
+
+    } // end UpdateNumScans
+
+    /// <summary>
     /// Generate a random ship at the origin of the scene
     /// </summary>
-    public void GenerateShip()
-    //public void GenerateShip(ShipLayoutGenerator.ShipSize shipType)
+    //public void GenerateShip()
+    public void GenerateShip(ShipLayoutGenerator.ShipSize shipType)
     {
         ClearShips();
 
         // Get the room info layout and create the ship - for now only one ship is built
-        RoomInfo[,] ship = shipLayoutGeneratorScript.GenerateShipLayout();
-        //RoomInfo[,] ship = shipLayoutGeneratorScript.GenerateShipLayout(shipType);
+        //RoomInfo[,] ship = shipLayoutGeneratorScript.GenerateShipLayout();
+        RoomInfo[,] ship = shipLayoutGeneratorScript.GenerateShipLayout(shipType);
         CreateShip(ship, 0, 0);
 
     } // end GenerateShip

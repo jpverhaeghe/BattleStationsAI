@@ -28,9 +28,7 @@ public class EngineeringBot : GenericBot
 
     // private variables
     private EngineerActions actionToTake;
-    private RoomInfo moduleToActOn;
-    private int actionDifficulty;
-    private int powerToAdjust;
+    private int adjustmentLevel;
 
     /// <summary>
     /// Start is called before the first frame update
@@ -116,32 +114,6 @@ public class EngineeringBot : GenericBot
     } // end PerformIdleState
 
     /// <summary>
-    /// Finds a path to the next module terminal location for the given module
-    /// </summary>
-    /// <param name="moduleToMoveTo">The module to search for a terminal for pathing</param>
-    protected override void FindNextMoveLocation()
-    {
-        // if we have an module to move to based on a selected action, move there
-        if (moduleToActOn != null)
-        {
-            // get the next terminal location for the given module
-            Vector2Int moveLocation = moduleToActOn.GetTerminalLoacation(currentTerminal);
-
-            // find the path to the given destination
-            currentPath = myShip.shipPathingSystem.BreadthFirstSearch(GetGridPos(), moveLocation);
-
-            // set it to move to the new location
-            currentState = BotStates.MOVING;
-        }
-        // otherwise just wander from termninal to terminal (may not need this - perhaps better to just go back to idle)
-        else
-        {
-            base.FindNextMoveLocation();
-        }
-
-    } // end FindNextMoveLocation
-
-    /// <summary>
     /// Will perform a given action at the location
     /// - will need to set this up in idle perhaps - using heuristics to determine the best option for the bot at that time
     /// </summary>
@@ -157,9 +129,9 @@ public class EngineeringBot : GenericBot
                 {
                     GeneratedShip.ShipPowerAreas areaToAdjust = myShip.energyUpdateQueue.Dequeue();
 
-                    myShip.shipManagerScript.UpdateEnergy(myShip.shipID, (int)areaToAdjust, powerToAdjust);
-                    myShip.shipManagerScript.UpdateBotStatusText("Engines pumped successfully, added " + powerToAdjust + " power to " + areaToAdjust.ToString() + "!");
-                    //Debug.Log("Engines pumped successfully, added " + powerToAdjust + " power to " + areaToAdjust.ToString() + "!");
+                    myShip.shipManagerScript.UpdateEnergy(myShip.shipID, (int)areaToAdjust, adjustmentLevel);
+                    myShip.shipManagerScript.UpdateBotStatusText("Engines pumped successfully, added " + adjustmentLevel + " power to " + areaToAdjust.ToString() + "!");
+                    //Debug.Log("Engines pumped successfully, added " + adjustmentLevel + " power to " + areaToAdjust.ToString() + "!");
                 }
 
                 // used marker is added on success or failure
@@ -206,7 +178,7 @@ public class EngineeringBot : GenericBot
             if (myShip.energyUpdateQueue.Count > 0)
             {
                 // first try to pump the engines as more energy is better
-                powerToAdjust = 1;
+                adjustmentLevel = 1;
 
                 // depending on difficulty, pump engines by one or more - filling the areas of the queue
                 actionDifficulty = ENGINE_CHANGE_BASE_DIFFICULTY;
@@ -216,7 +188,7 @@ public class EngineeringBot : GenericBot
                 int difficulty = AttemptHigherDifficulty(actionDifficulty);
                 if (actionDifficulty != difficulty)
                 {
-                    powerToAdjust++;
+                    adjustmentLevel++;
                 }
 
                 // if the difficulty is too difficult, perhaps transferring instead if available as it ignores used markers
@@ -238,7 +210,7 @@ public class EngineeringBot : GenericBot
                         /*difficulty = AttemptHigherDifficulty(actionDifficulty);
                         if (actionDifficulty != difficulty)
                         {
-                            powerToAdjust++;
+                            adjustmentLevel++;
                         }*/
 
                         if (actionDifficulty <= MAX_DIFFICULTY_TO_TEST)
@@ -270,10 +242,10 @@ public class EngineeringBot : GenericBot
         switch (areaToAdjust)
         {
             case GeneratedShip.ShipPowerAreas.HELM:
-                if (myShip.energySystemLevels[(int)GeneratedShip.ShipPowerAreas.SHIELDS] < powerToAdjust)
+                if (myShip.energySystemLevels[(int)GeneratedShip.ShipPowerAreas.SHIELDS] < adjustmentLevel)
                 {
                     areaToTake = GeneratedShip.ShipPowerAreas.WEAPONS;
-                    if (myShip.energySystemLevels[(int)GeneratedShip.ShipPowerAreas.WEAPONS] < powerToAdjust)
+                    if (myShip.energySystemLevels[(int)GeneratedShip.ShipPowerAreas.WEAPONS] < adjustmentLevel)
                     {
                         transferAllowed = false;
                     }
@@ -281,10 +253,10 @@ public class EngineeringBot : GenericBot
                 break;
 
             case GeneratedShip.ShipPowerAreas.WEAPONS:
-                if (myShip.energySystemLevels[(int)GeneratedShip.ShipPowerAreas.SHIELDS] < powerToAdjust)
+                if (myShip.energySystemLevels[(int)GeneratedShip.ShipPowerAreas.SHIELDS] < adjustmentLevel)
                 {
                     areaToTake = GeneratedShip.ShipPowerAreas.HELM;
-                    if (myShip.energySystemLevels[(int)GeneratedShip.ShipPowerAreas.HELM] < powerToAdjust)
+                    if (myShip.energySystemLevels[(int)GeneratedShip.ShipPowerAreas.HELM] < adjustmentLevel)
                     {
                         transferAllowed = false;
                     }
@@ -293,10 +265,10 @@ public class EngineeringBot : GenericBot
 
             case GeneratedShip.ShipPowerAreas.SHIELDS:
                 areaToTake = GeneratedShip.ShipPowerAreas.HELM;
-                if (myShip.energySystemLevels[(int)GeneratedShip.ShipPowerAreas.HELM] < powerToAdjust)
+                if (myShip.energySystemLevels[(int)GeneratedShip.ShipPowerAreas.HELM] < adjustmentLevel)
                 {
                     areaToTake = GeneratedShip.ShipPowerAreas.WEAPONS;
-                    if (myShip.energySystemLevels[(int)GeneratedShip.ShipPowerAreas.WEAPONS] < powerToAdjust)
+                    if (myShip.energySystemLevels[(int)GeneratedShip.ShipPowerAreas.WEAPONS] < adjustmentLevel)
                     {
                         transferAllowed = false;
                     }
@@ -309,10 +281,10 @@ public class EngineeringBot : GenericBot
 
         if (transferAllowed)
         {
-            myShip.shipManagerScript.UpdateEnergy(myShip.shipID, (int)areaToAdjust, powerToAdjust);
-            myShip.shipManagerScript.UpdateEnergy(myShip.shipID, (int)areaToTake, -powerToAdjust);
-            myShip.shipManagerScript.UpdateBotStatusText(powerToAdjust + " power transfered from " + areaToTake.ToString() + " to " + areaToAdjust.ToString() + "!");
-            //Debug.Log(powerToAdjust + " power transfered from " + areaToTake.ToString() + " to " + areaToAdjust.ToString() + "!");
+            myShip.shipManagerScript.UpdateEnergy(myShip.shipID, (int)areaToAdjust, adjustmentLevel);
+            myShip.shipManagerScript.UpdateEnergy(myShip.shipID, (int)areaToTake, -adjustmentLevel);
+            myShip.shipManagerScript.UpdateBotStatusText(adjustmentLevel + " power transfered from " + areaToTake.ToString() + " to " + areaToAdjust.ToString() + "!");
+            //Debug.Log(adjustmentLevel + " power transfered from " + areaToTake.ToString() + " to " + areaToAdjust.ToString() + "!");
         }
 
     } // end TransferPowerLevels

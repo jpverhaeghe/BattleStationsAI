@@ -44,18 +44,25 @@ public class GenericBot : MonoBehaviour
     // TODO: if we need these outward facing, then make public
     protected GeneratedShip myShip;                                 // a link back to the ship we are tied to
     protected BotType myType;
+
+    // game statistics
     protected int athletics;                                        // used for movement
     protected int combat;                                           // used for combat - weapons officer profession
     protected int engineering;                                      // used for combat - engineering officer profession
     protected int piloting;                                         // used for combat - command officer profession
     protected int science;                                          // used for combat - science officer profession
 
+    // AI systems
     protected List<Vector2Int> currentPath;                         // stores the path to move to
     protected BotStates currentState = BotStates.IDLE;              // sets up the default state for this bot
     protected bool runningState = false;                            // a boolean used to make sure we don't start multiple co-routines
     protected int moveSpeed = 4;                                    // the amount of squares a bot can move - same for all bots
     protected int currentModule = 0;                                // allows bots to move to differnt modules if they have more
     protected int currentTerminal = 0;                              // the terminal we are currently working at (may not need later)
+
+    // action choices
+    protected RoomInfo moduleToActOn;
+    protected int actionDifficulty;
 
 
     /// <summary>
@@ -180,10 +187,30 @@ public class GenericBot : MonoBehaviour
 
         // roll the die here using random (will eventually pause game and roll die in game)
         // TODO: Display result and difficulty to screen
-        int checkResult = RollDie() + RollDie();
+        int firstRoll = RollDie();
+        int secondRoll = RollDie();
+        int checkResult = firstRoll + secondRoll;
+
+        // if we have scans for re-rolls and the roll would fail, re-roll the lowest die
+        if ( (checkResult < difficulty) && (myShip.numStoredScans > 0))
+        {
+            if (firstRoll < secondRoll)
+            {
+                firstRoll = RollDie();
+            }
+            else
+            {
+                secondRoll = RollDie();
+            }
+
+            // remove the scan
+            myShip.shipManagerScript.UpdateNumScans(myShip.shipID, -1);
+
+            // adjust the roll (even if it is worse)
+            checkResult = firstRoll + secondRoll;
+        }
 
         myShip.shipManagerScript.UpdateBotRollText("Bot performed a check: " + checkResult + " vs. difficulty of " + difficulty);
-
         //Debug.Log("Bot performed a check: " +  checkResult + " vs. difficulty of " + difficulty);
         return (checkResult >= difficulty);
 
@@ -246,35 +273,51 @@ public class GenericBot : MonoBehaviour
     /// <summary>
     /// Finds a path to the next module terminal location for the given module
     /// </summary>
-    protected virtual void FindNextMoveLocation()
+    protected void FindNextMoveLocation()
     {
-        // get the next terminal location for the given module
-        RoomInfo moduleToMoveTo = myModules[currentModule];
-        Vector2Int moveLocation  = moduleToMoveTo.GetTerminalLoacation(currentTerminal);
-
-        // increase the terminal location index and wrap around if it is larger than the number in the module
-        currentTerminal++;
-
-        // reset back to zero if the index is larger than the number of terminal locations
-        if (currentTerminal >= moduleToMoveTo.GetTerminalLoacations().Count)
+        // if we have an module to move to based on a selected action, move there
+        if (moduleToActOn != null)
         {
-            currentTerminal = 0;
+            // get the next terminal location for the given module
+            Vector2Int moveLocation = moduleToActOn.GetTerminalLoacation(currentTerminal);
 
-            // some bots have more than one module they look after, have them roam to the next one
-            currentModule++;
+            // find the path to the given destination
+            currentPath = myShip.shipPathingSystem.BreadthFirstSearch(GetGridPos(), moveLocation);
 
-            // capping the module so we don't go out of bounds
-            if (currentModule >= myModules.Count)
-            {
-                currentModule = 0;
-            }
+            // set it to move to the new location
+            currentState = BotStates.MOVING;
         }
+        // otherwise just wander from termninal to terminal (may not need this - perhaps better to just go back to idle)
+        else
+        {
+            // get the next terminal location for the given module
+            RoomInfo moduleToMoveTo = myModules[currentModule];
+            Vector2Int moveLocation = moduleToMoveTo.GetTerminalLoacation(currentTerminal);
 
-        // find the path to the given destination
-        currentPath = myShip.shipPathingSystem.BreadthFirstSearch(GetGridPos(), moveLocation);
+            // increase the terminal location index and wrap around if it is larger than the number in the module
+            currentTerminal++;
 
-        // set it to move to the new location
-        currentState = BotStates.MOVING;
+            // reset back to zero if the index is larger than the number of terminal locations
+            if (currentTerminal >= moduleToMoveTo.GetTerminalLoacations().Count)
+            {
+                currentTerminal = 0;
+
+                // some bots have more than one module they look after, have them roam to the next one
+                currentModule++;
+
+                // capping the module so we don't go out of bounds
+                if (currentModule >= myModules.Count)
+                {
+                    currentModule = 0;
+                }
+            }
+
+            // find the path to the given destination
+            currentPath = myShip.shipPathingSystem.BreadthFirstSearch(GetGridPos(), moveLocation);
+
+            // set it to move to the new location
+            currentState = BotStates.MOVING;
+        }
 
     } // end FindNextMoveLocation
 

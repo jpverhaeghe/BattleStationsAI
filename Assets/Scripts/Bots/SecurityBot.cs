@@ -30,8 +30,6 @@ public class SecurityBot : GenericBot
 
     // private variables
     private SecurityActions actionToTake;
-    private RoomInfo moduleToActOn;
-    private int actionDifficulty;
 
     /// <summary>
     /// Start is called before the first frame update
@@ -147,32 +145,6 @@ public class SecurityBot : GenericBot
     } // end PerformIdleState
 
     /// <summary>
-    /// Finds a path to the next module terminal location for the given module
-    /// </summary>
-    /// <param name="moduleToMoveTo">The module to search for a terminal for pathing</param>
-    protected override void FindNextMoveLocation()
-    {
-        // if we have an module to move to based on a selected action, move there
-        if (moduleToActOn != null)
-        {
-            // get the next terminal location for the given module
-            Vector2Int moveLocation = moduleToActOn.GetTerminalLoacation(currentTerminal);
-
-            // find the path to the given destination
-            currentPath = myShip.shipPathingSystem.BreadthFirstSearch(GetGridPos(), moveLocation);
-
-            // set it to move to the new location
-            currentState = BotStates.MOVING;
-        }
-        // otherwise just wander from termninal to terminal (may not need this - perhaps better to just go back to idle)
-        else
-        {
-            base.FindNextMoveLocation();
-        }
-
-    } // end FindNextMoveLocation
-
-    /// <summary>
     /// Will perform a given action at the location
     /// - will need to set this up in idle perhaps - using heuristics to determine the best option for the bot at that time
     /// </summary>
@@ -223,7 +195,7 @@ public class SecurityBot : GenericBot
                 {
                     //myShip.hullDamage += hullDamage;
                     myShip.shipManagerScript.UpdateHullDamage(myShip.shipID, hullDamage);
-                    myShip.shipManagerScript.UpdateBotStatusText("!!!Missile faild to fire, it exploded and did " + hullDamage + " damage to your ship!!!");
+                    myShip.shipManagerScript.UpdateBotStatusText("!!!Missile failed to fire, it exploded and did " + hullDamage + " damage to your ship!!!");
                     //Debug.Log("!!!Missile faild to fire, it exploded and did " + hullDamage + " damage to your ship!!!");
                 }
 
