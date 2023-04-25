@@ -15,8 +15,8 @@ public class ShipLayoutGenerator : MonoBehaviour
         Scout,          // Size should be 3 - 9 to 11 rooms
         Frigate,        // Size should be 4 - 12 to 14 rooms
         Destroyer,      // Size should be 5 - 15 to 17 rooms
-        Cruiser,        // Size should be 6 - 18 to 20 rooms
-        Dreadnought,    // Size should be 7 - 21 to 23 rooms
+        //Cruiser,        // Size should be 6 - 18 to 20 rooms
+        //Dreadnought,    // Size should be 7 - 21 to 23 rooms
     }
 
     [System.Flags]

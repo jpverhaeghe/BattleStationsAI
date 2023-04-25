@@ -421,35 +421,41 @@ public class GenericBot : MonoBehaviour
 
         // default to the current module and the next terminal in that module
         int newModule = currentModule;
-        int newTerminal = currentTerminal++;
+        int newTerminal = (currentTerminal + 1);
 
         // go through the all the modules I have access to and see if one is available for me to wander to
         // if none are available (we have wrapped around), just leave me where I am and don't move
         while (!newTerminalFound && ((newModule != currentModule) || (newTerminal != currentTerminal)))
         {
             // reset back to zero if the index is larger than the number of terminal locations
-            if (currentTerminal >= myModules[currentModule].GetTerminalLoacations().Count)
+            if (newTerminal >= myModules[currentModule].GetTerminalLoacations().Count)
             {
-                currentTerminal = 0;
+                newTerminal = 0;
 
                 // some bots have more than one module they look after, have them roam to the next one
-                currentModule++;
+                newModule++;
 
                 // capping the module so we don't go out of bounds
-                if (currentModule >= myModules.Count)
+                if (newModule >= myModules.Count)
                 {
-                    currentModule = 0;
+                    newModule = 0;
                 }
             }
 
             // check to see if the terminal is occupied
-            if (!myModules[currentModule].IsTerminalOccupied(currentTerminal) )
+            if (!myModules[newModule].IsTerminalOccupied(newTerminal) )
             {
                 newTerminalFound = true;
             }
 
             // increase the terminal location index 
-            currentTerminal++;
+            newTerminal++;
+        }
+
+        if (newTerminalFound) 
+        { 
+            currentModule = newModule;
+            currentTerminal = newTerminal;
         }
 
         return newTerminalFound;

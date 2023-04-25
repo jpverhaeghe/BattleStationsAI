@@ -13,6 +13,7 @@ public class ShipManager : MonoBehaviour
     public static int COLLISION_DAMAGE = 5;
     public static int MAX_HEX_RANGE = 50;
     public const int BUFFER_BETWEEN_SHIPS = 10;
+    public const int DAMAGE_TO_LOSE = 50;                               // the amount of damage a ship must take to be destroyed
 
     private string[] energyLabels = { "Helm", "Guns", "Shld"};
 
@@ -21,6 +22,7 @@ public class ShipManager : MonoBehaviour
     [SerializeField] GameManager gameManager;
     [SerializeField] ShipLayoutGenerator shipLayoutGeneratorScript;     // a link to the ship layout generator to call when generate ship is pressed
     [SerializeField] public TMP_Dropdown botChatterChoice;              // allows user to choose what chatter is being shown
+    [SerializeField] public TMP_InputField damageMaximum;               // allows user to choose what chatter is being shown
     [SerializeField] public GameObject[] botPrefabs;                    // a link to an the bot prefabs for adding to a ship
 
     // TODO: Think of a way to re-use these for each ship as they go through the AI
@@ -120,6 +122,55 @@ public class ShipManager : MonoBehaviour
     } // DoPhase1Setup
 
     /// <summary>
+    /// Checks to see if a ship is destroyed and if so ends the simulation
+    /// </summary>
+    /// <returns></returns>
+    public bool CheckEndSimulation()
+    {
+        int shipDestroyed = -1;
+
+        if (shipObjects != null)
+        {
+            GeneratedShip heroShip = shipObjects[0].GetComponent<GeneratedShip>();
+            GeneratedShip enemyShip = shipObjects[1].GetComponent<GeneratedShip>();
+
+            int damageMax;
+            bool success = int.TryParse(damageMaximum.text, out damageMax);
+
+            if (!success) 
+            { 
+                damageMax = DAMAGE_TO_LOSE; 
+            }
+
+            // did the hero ship lose?
+            if (heroShip.hullDamage >= damageMax)
+            {
+                shipDestroyed = 0;
+                enemyShip.currentTarget = null;
+            }
+            // did the enemy ship lose?
+            else if (enemyShip.hullDamage >= DAMAGE_TO_LOSE)
+            {
+                shipDestroyed = 1;
+                heroShip.currentTarget = null;
+            }
+        }
+
+        if (shipDestroyed >= 0)
+        {
+            // stop al messages and post a message
+            botRollText.text = shipObjects[shipDestroyed].name + " was destroyed. Simulation ending!";
+            botChatterChoice.value = 0;
+
+            // Destroy the ship object that was destryoed
+            ClearShip(shipDestroyed);
+        }
+
+        return (shipDestroyed >= 0);
+
+    } //end CheckEndSimulation
+
+    /// <summary>
     /// Move the generated ships along their direction in the hypothetical map
     /// TODO: Make the world wrap around or leave it or maybe not (ships always chase each other)
     /// </summary>
@@ -175,7 +226,7 @@ public class ShipManager : MonoBehaviour
     /// Updates the direction of the ship with to the new value
     /// </summary>
     /// <param name="shipID">The index of the ship that is being adjusted in the list</param>
-    /// <param name="directionChange">The value to change the hull damage by</param>
+    /// <param name="directionChange">The value to change the ship direction by</param>
     public void UpdateShipDirection(int shipID, int directionChange)
     {
         // only adjust if the ship id is in the list, otherwise it is invalid
@@ -266,7 +317,7 @@ public class ShipManager : MonoBehaviour
     /// Updates the OOC level to the new value
     /// </summary>
     /// <param name="shipID">The index of the ship that is being adjusted in the list</param>
-    /// <param name="oocChange">The value to change the hull damage by</param>
+    /// <param name="oocChange">The value to change the OOC by</param>
     public void UpdateOutOfControl(int shipID, int oocChange)
     {
         // only adjust if the ship id is in the list, otherwise it is invalid
@@ -326,8 +377,7 @@ public class ShipManager : MonoBehaviour
     } // end UpdateEnergy
 
     /// <summary>
-    /// Updates the speed with to the new value
-    /// TODO: When speed is over 4 - the ship should take damage
+    /// Updates the number of scans with to the new value
     /// </summary>
     /// <param name="shipID">The index of the ship that is being adjusted in the list</param>
     /// <param name="scanChange">The value to change the speed by</param>
@@ -438,15 +488,18 @@ public class ShipManager : MonoBehaviour
         // add the ship component that keeps track of an individual ship status
         shipObject.AddComponent<GeneratedShip>();
 
+        // grabbing the ship script as we need to initialize some data before generating the ship and to set it up before it is used
+        GeneratedShip thisShipScript = shipObject.GetComponent<GeneratedShip>();
+
         // as we add to the end, the id of the ship will be the current count
         int shipID = shipObjects.Count;
         this.shipObjects.Add(shipObject);
-        shipObjects[shipID].GetComponent<GeneratedShip>().SetupBotStuct();
+        thisShipScript.SetupBotStuct();
 
-        // build the ship
-        //Vector3 helmPos = BuildShip(shipId, ship, xPos, zPos);
+        // build the ship - need to initialize the walls before building so they can be populated in the build process
+        thisShipScript.walls = new List<GameObject>();
         BuildShip(shipID, ship, xPos, zPos);
-        shipObjects[shipID].GetComponent<GeneratedShip>().SetupShip(this, ship, shipWorldPos, shipID, currentSpawnShipSize, mapLocation);
+        thisShipScript.SetupShip(this, ship, shipWorldPos, shipID, currentSpawnShipSize, mapLocation);
 
         // if the ship ID is zero, set the camera to follow the bots on that ship
         gameManager.SetShipCamera();

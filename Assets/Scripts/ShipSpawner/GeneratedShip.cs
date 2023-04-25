@@ -1,6 +1,7 @@
 using AlanZucconi.AI.PF;
 using System.Collections;
 using System.Collections.Generic;
+using Unity.VisualScripting;
 using UnityEngine;
 
 
@@ -29,6 +30,7 @@ public class GeneratedShip : MonoBehaviour
     // public variables used by the ship manager for keeping track of the current ships state
     public ShipManager shipManagerScript;               // a link back to the ship manager so we can have access to the bot prefabs
     public RoomInfo[,] shipLayout;                      // the ship layout using room types
+    public List<GameObject> walls;                      // a list containing all the walls for this ship so we can destroy them as it takes damage
     public Grid2D shipPathingSystem;                    // the grid for the pathing system used by bots for this ship
     public Vector3 shipWorldOrigin;                     // the world position where the top left corner of the ship layout begins (for pathfinding)
     public int shipID;                                  // the id of the ship
@@ -200,6 +202,9 @@ public class GeneratedShip : MonoBehaviour
         {
             this.hullDamage = 0;
         }
+
+        // go through the walls and make one start disolving
+        DestroyWall();
 
     } // end UpdateHullDamage
 
@@ -584,4 +589,36 @@ public class GeneratedShip : MonoBehaviour
 
     } // FindRoomsInShip
 
+    /// <summary>
+    /// Chooses a random wall to destroy.
+    /// </summary>
+    private void DestroyWall()
+    {
+        // Grab a random wall in the ship, mark it as destroyed (turning on the dissolve shader), then actually destroy it
+        if (walls != null)
+        {
+            int randomWall = Random.Range(0, walls.Count);
+
+            GameObject wallToDestroy = walls[randomWall];
+            walls.RemoveAt(randomWall);
+
+            wallToDestroy.GetComponentInChildren<Renderer>().material.SetFloat("_dissolve", 1.0f);
+
+            // wait a second for the dissolve to happen before destroying the wall
+            StartCoroutine("DeleteWall", wallToDestroy);
+        }
+
+    } // end DestroyWall
+
+    /// <summary>
+    /// Deletes the given wall from the scene
+    /// </summary>
+    /// <param name="wall">the wall game object to delete</param>
+    /// <returns></returns>
+    private IEnumerator DeleteWall(GameObject wall)
+    {
+        yield return new WaitForSeconds(3);
+        Destroy(wall);
+
+    } // end DeleteWall
 }

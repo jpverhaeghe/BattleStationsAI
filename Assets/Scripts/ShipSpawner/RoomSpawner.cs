@@ -99,7 +99,8 @@ public class RoomSpawner : MonoBehaviour
 
                     // A wall, so not walkable
                     case RoomTiles.Wall:
-                        InstantiateWall(roomObject, currentTilePos_x, currentTilePos_z);
+                        GeneratedShip generatedShip = parentShipObject.GetComponent<GeneratedShip>();
+                        generatedShip.walls.Add(InstantiateWall(roomObject, currentTilePos_x, currentTilePos_z));
 
                         // for placement of the walkable areas in this ship walls should not be walkable
                         currentGeneratedShip.shipPathingSystem.SetWall(new Vector2Int(currentShipTileRow, currentShipTileCol));
@@ -160,13 +161,15 @@ public class RoomSpawner : MonoBehaviour
     /// <param name="parentObject">the object to link this wall to</param>
     /// <param name="x">the tilePos_x position - adjusted here as array edges are not part of the room</param>
     /// <param name="z">the tilePos_z position - adjusted here as array edges are not part of the room</param>
-    private void InstantiateWall(GameObject parentObject, float x, float z)
+    private GameObject InstantiateWall(GameObject parentObject, float x, float z)
     {
         // instantiate the wall at the given position
         GameObject newObject = Instantiate(wallPrefab, new Vector3(x, 0, z), Quaternion.identity);
 
         // Add the wall to the parent object so we can move it easier later
         newObject.transform.SetParent(parentObject.transform);
+
+        return newObject;
 
     } // end InstantiateWall
 

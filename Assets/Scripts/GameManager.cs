@@ -60,6 +60,13 @@ public class GameManager : MonoBehaviour
                 timer = 0;
                 DoPhases();
             }
+
+            // if a ship is damaged enough, end the simulation
+            if (shipManager.CheckEndSimulation())
+            {
+                simulationRunning = false;
+                Invoke("EndSimulation", 3);
+            }
         }
 
     } // end Update
