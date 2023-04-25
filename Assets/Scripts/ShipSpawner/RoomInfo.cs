@@ -5,6 +5,13 @@ using static RoomData;
 
 public class RoomInfo
 {
+    // used to keep track of terminals in the game
+    public struct TerminalInfo
+    {
+        public Vector2Int mapLocation;
+        public Renderer starTileRenderer;
+    }
+
     // This classes public variables used by other classes
     // TODO: Make these private and use getters/setters (probably just need getters)
     public string roomName;
@@ -15,7 +22,7 @@ public class RoomInfo
     public Vector2Int roomGridPos;
     public bool externalFacing;
 
-    private List<Vector2Int> terminalLocations = new List<Vector2Int>();
+    private List<TerminalInfo> terminalLocations = new List<TerminalInfo>();
     private Vector3 roomWorldPos;
     private int numUsedMarkers = 0;
     private bool broken = false;
@@ -42,7 +49,7 @@ public class RoomInfo
     /// Gets all the terminal locations for this module - for pathfinding
     /// </summary>
     /// <returns>A list of all current terminal locations in this room</returns>
-    public List<Vector2Int> GetTerminalLoacations() 
+    public List<TerminalInfo> GetTerminalLoacations() 
     {  
         return terminalLocations;
 
@@ -54,7 +61,7 @@ public class RoomInfo
     /// </summary>
     /// <param name="terminalIndex">The index of the terminal location</param>
     /// <returns>A list of all current terminal locations in this room</returns>
-    public Vector2Int GetTerminalLoacation(int terminalIndex)
+    public TerminalInfo GetTerminalLoacation(int terminalIndex)
     {
         if ((terminalIndex >= 0) && (terminalIndex < terminalLocations.Count))
         {
@@ -70,10 +77,14 @@ public class RoomInfo
     /// <summary>
     /// Adds a terminal location to this room - for pathfinding
     /// </summary>
-    /// <param name="location">the terminal location on the Grid2D</param>
-    public void AddTerminalLocation(Vector2Int location)
+    /// <param name="mapLocation">the terminal location on the Grid2D</param>
+    /// <param name="starTileRenderer">the renderer for the star tile that is this terminal location</param>
+    public void AddTerminalLocation(Vector2Int mapLocation, Renderer starTileRenderer)
     {
-        terminalLocations.Add(location);
+        TerminalInfo terminalInfo = new TerminalInfo();
+        terminalInfo.mapLocation = mapLocation;
+        terminalInfo.starTileRenderer = starTileRenderer;
+        terminalLocations.Add(terminalInfo);
 
     } // AddTerminalLocation
 

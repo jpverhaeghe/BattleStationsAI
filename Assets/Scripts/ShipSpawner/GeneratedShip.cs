@@ -496,7 +496,7 @@ public class GeneratedShip : MonoBehaviour
             // we check just in case
             if (terminalToUse >= 0)
             {
-                startGridPos = startRoom.GetTerminalLoacation(terminalToUse);
+                startGridPos = startRoom.GetTerminalLoacation(terminalToUse).mapLocation;
                 startRoom.SetTerminalOccupied(terminalToUse);
             }
         }

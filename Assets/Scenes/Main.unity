@@ -1475,7 +1475,7 @@ Transform:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 330585543}
   m_LocalRotation: {x: 0.7071068, y: 0, z: 0, w: 0.7071068}
-  m_LocalPosition: {x: 38, y: 74, z: -12}
+  m_LocalPosition: {x: 38, y: 60, z: -12}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children: []
@@ -1836,7 +1836,7 @@ Light:
   serializedVersion: 10
   m_Type: 1
   m_Shape: 0
-  m_Color: {r: 0.9512287, g: 0.9622642, b: 0.63999647, a: 1}
+  m_Color: {r: 0.73794055, g: 0.9716981, b: 0.95501745, a: 1}
   m_Intensity: 0.5
   m_Range: 10
   m_SpotAngle: 30
@@ -1895,7 +1895,7 @@ Transform:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 410087039}
   m_LocalRotation: {x: 0.7071068, y: -0, z: -0, w: 0.7071068}
-  m_LocalPosition: {x: 0, y: 50, z: 0}
+  m_LocalPosition: {x: 0, y: 40, z: 0}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children: []
@@ -4833,12 +4833,18 @@ MonoBehaviour:
     type: 3}
   wallPrefab: {fileID: 46225917060783835, guid: 1af580d52d138a84797218fa81f46f25,
     type: 3}
-  tileMaterials:
+  floorMaterials:
   - {fileID: 2100000, guid: 6f567e5cff703704aac6f2b5716d53e1, type: 2}
   - {fileID: 2100000, guid: dcc5b9c20a9c3834088c7ae2ef4c8be5, type: 2}
   - {fileID: 2100000, guid: 66fa69f51a5deb842a86f39605458eb0, type: 2}
   - {fileID: 2100000, guid: 3d24ebff898c82e469ede96e36dfc532, type: 2}
   - {fileID: 2100000, guid: be556a5bd230d8b4d94a55ccd0e4d046, type: 2}
+  starMaterials:
+  - {fileID: 2100000, guid: 919e4cd70a4f52e46b5e3d53e82d52ef, type: 2}
+  - {fileID: 2100000, guid: 10dfa7b3e201d9649905cf359fed3d75, type: 2}
+  - {fileID: 2100000, guid: 415310d39ef0d344782a1868c3d68870, type: 2}
+  - {fileID: 2100000, guid: dfcfbc1322d3e654eb13cc264292d584, type: 2}
+  - {fileID: 2100000, guid: 5e8595ff069c377459a899a2d8332ddb, type: 2}
   floorTileTexture: {fileID: 2800000, guid: c4bb6d255d1a70843ac3e67a82e2c2c6, type: 3}
   starTileTexture: {fileID: 2800000, guid: 1af0a9eaee4cc454baea379d2adf6866, type: 3}
 --- !u!4 &1026004045

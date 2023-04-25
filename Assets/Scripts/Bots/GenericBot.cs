@@ -2,6 +2,7 @@ using AlanZucconi.AI.PF;
 using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
+using static RoomInfo;
 
 public class GenericBot : MonoBehaviour
 {
@@ -303,44 +304,43 @@ public class GenericBot : MonoBehaviour
         if (moduleToActOn != null)
         {
             // get the next terminal location for the given module
-            Vector2Int moveLocation = moduleToActOn.GetTerminalLoacation(currentTerminal);
+            TerminalInfo terminalInfo = moduleToActOn.GetTerminalLoacation(currentTerminal);
+            Vector2Int moveLocation = terminalInfo.mapLocation;
 
             // find the path to the given destination
             currentPath = myShip.shipPathingSystem.BreadthFirstSearch(GetGridPos(), moveLocation);
+            
+            // Make the star tile pulse while the bot is moving there
+            terminalInfo.starTileRenderer.material.SetFloat("_pulse", 1.0f);
+            gameObject.GetComponent<Renderer>().material.SetFloat("_pulse", 1.0f);
 
             // set it to move to the new location
             currentState = BotStates.MOVING;
         }
-        // otherwise just wander from termninal to terminal (may not need this - perhaps better to just go back to idle)
+        // otherwise just wander from termninal to terminal (it is fun to watch them move around)
         else
         {
-            // get the next terminal location for the given module
-            RoomInfo moduleToMoveTo = myModules[currentModule];
-            Vector2Int moveLocation = moduleToMoveTo.GetTerminalLoacation(currentTerminal);
+            bool newTerminalFound = FindTerminalToWanderTo();
 
-            // increase the terminal location index and wrap around if it is larger than the number in the module
-            currentTerminal++;
-
-            // reset back to zero if the index is larger than the number of terminal locations
-            if (currentTerminal >= moduleToMoveTo.GetTerminalLoacations().Count)
+            if (newTerminalFound)
             {
-                currentTerminal = 0;
+                TerminalInfo terminalInfo = myModules[currentModule].GetTerminalLoacation(currentTerminal);
+                Vector2Int moveLocation = terminalInfo.mapLocation;
 
-                // some bots have more than one module they look after, have them roam to the next one
-                currentModule++;
+                // find the path to the given destination
+                currentPath = myShip.shipPathingSystem.BreadthFirstSearch(GetGridPos(), moveLocation);
 
-                // capping the module so we don't go out of bounds
-                if (currentModule >= myModules.Count)
-                {
-                    currentModule = 0;
-                }
+                // Make the star tile pulse while the bot is moving there
+                terminalInfo.starTileRenderer.material.SetFloat("_pulse", 1.0f);
+                gameObject.GetComponent<Renderer>().material.SetFloat("_pulse", 1.0f);
+
+                // set it to move to the new location
+                currentState = BotStates.MOVING;
             }
-
-            // find the path to the given destination
-            currentPath = myShip.shipPathingSystem.BreadthFirstSearch(GetGridPos(), moveLocation);
-
-            // set it to move to the new location
-            currentState = BotStates.MOVING;
+            else
+            {
+                currentState = BotStates.IDLE;
+            }
         }
 
     } // end FindNextMoveLocation
@@ -366,7 +366,6 @@ public class GenericBot : MonoBehaviour
                 // TODO: Need to add wait if the area is blocked by another bot....what bots have priority?
                 // may just want to set the position
                 gameObject.transform.position = newPosition;
-                //gameObject.transform.Translate(newPosition);
 
                 // remove this part of the path as we have moved
                 currentPath.RemoveAt(0);
@@ -378,6 +377,19 @@ public class GenericBot : MonoBehaviour
             // if not, then we must be there, time to move on
             else
             {
+                // get the next terminal location for the given module
+                RoomInfo moduleToMoveTo = myModules[currentModule];
+                TerminalInfo terminalInfo = moduleToMoveTo.GetTerminalLoacation(currentTerminal);
+
+                // if the bot was acting on a specific terminal, then use that one instead (not wandering)
+                if (moduleToActOn != null)
+                {
+                    terminalInfo = moduleToActOn.GetTerminalLoacation(currentTerminal);
+                }
+                
+                // stop the star tile from pulsing
+                terminalInfo.starTileRenderer.material.SetFloat("_pulse", 0f);
+                gameObject.GetComponent<Renderer>().material.SetFloat("_pulse", 0f);
                 currentState = BotStates.ACTING;
             }
         }
@@ -402,5 +414,46 @@ public class GenericBot : MonoBehaviour
         runningState = false;
 
     } // end DoAction
+
+    private bool FindTerminalToWanderTo()
+    {
+        bool newTerminalFound = false;
+
+        // default to the current module and the next terminal in that module
+        int newModule = currentModule;
+        int newTerminal = currentTerminal++;
+
+        // go through the all the modules I have access to and see if one is available for me to wander to
+        // if none are available (we have wrapped around), just leave me where I am and don't move
+        while (!newTerminalFound && ((newModule != currentModule) || (newTerminal != currentTerminal)))
+        {
+            // reset back to zero if the index is larger than the number of terminal locations
+            if (currentTerminal >= myModules[currentModule].GetTerminalLoacations().Count)
+            {
+                currentTerminal = 0;
+
+                // some bots have more than one module they look after, have them roam to the next one
+                currentModule++;
+
+                // capping the module so we don't go out of bounds
+                if (currentModule >= myModules.Count)
+                {
+                    currentModule = 0;
+                }
+            }
+
+            // check to see if the terminal is occupied
+            if (!myModules[currentModule].IsTerminalOccupied(currentTerminal) )
+            {
+                newTerminalFound = true;
+            }
+
+            // increase the terminal location index 
+            currentTerminal++;
+        }
+
+        return newTerminalFound;
+
+    } // end FindTerminalToWanderTo
 
 }

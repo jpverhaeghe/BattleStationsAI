@@ -60,6 +60,7 @@ public class CommandBot : GenericBot
 
         // default action will be to wait
         actionToTake = CommandActions.WAIT;
+        moduleToActOn = null;
         BotStates nextState = BotStates.MOVE;
         int currentShipHelmLevel = myShip.energySystemLevels[(int)GeneratedShip.ShipPowerAreas.HELM];
 

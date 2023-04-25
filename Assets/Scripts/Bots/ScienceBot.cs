@@ -58,6 +58,7 @@ public class ScienceBot : GenericBot
 
         // default action will be to wait
         actionToTake = ScienceActions.WAIT;
+        moduleToActOn = null;
         BotStates nextState = BotStates.MOVE;
         int currentShipShieldsLevel = myShip.energySystemLevels[(int)GeneratedShip.ShipPowerAreas.SHIELDS];
 

@@ -66,6 +66,7 @@ public class SecurityBot : GenericBot
 
         // default action will be to wait
         actionToTake = SecurityActions.WAIT;
+        moduleToActOn = null;
         BotStates nextState = BotStates.MOVE;
         int currentShipWeaponsLevel = myShip.energySystemLevels[(int)GeneratedShip.ShipPowerAreas.WEAPONS];
 
@@ -282,13 +283,15 @@ public class SecurityBot : GenericBot
                 // difficulty of cannon to succeed is (distance from ship + 2 x otherShipSpeed + 3 x num used markers on cannon - combat skill)
                 actionDifficulty = GetDistanceToTarget();
                 actionDifficulty += myShip.currentTarget.currentSpeed * SPEED_MULTIPLIER;
+                actionDifficulty += cannonToFire.GetNumUsedMarkers() * ADD_OR_USED_MULTIPLIER;
             }
             else
             {
                 actionDifficulty = MISSILE_BASE_DIFFICULTY;
+                actionDifficulty += missileToFire.GetNumUsedMarkers() * ADD_OR_USED_MULTIPLIER;
             }
 
-            actionDifficulty += myModules[currentModule].GetNumUsedMarkers() * ADD_OR_USED_MULTIPLIER;
+            // adjust for combat skill
             actionDifficulty -= combat;
 
             // only fire if there is a chance to succeed within our tolerance

@@ -16,7 +16,8 @@ public class RoomSpawner : MonoBehaviour
     [SerializeField] List<GameObject> tileObjects;                      // the tiles that will be used to build the rooms
     [SerializeField] GameObject floorPrefab;                            // the floor tile prefab
     [SerializeField] GameObject wallPrefab;                             // the wall prefab to put up room boundaries
-    [SerializeField] Material[] tileMaterials;                          // room type tileMaterials to apply to the room tiles based on the room type
+    [SerializeField] Material[] floorMaterials;                         // room type tileMaterials to apply to the room tiles based on the room type
+    [SerializeField] Material[] starMaterials;                          // room type tileMaterials to apply to the room tiles based on the room type
     [SerializeField] Texture floorTileTexture;                          // the texture to apply to floor tiles
     [SerializeField] Texture starTileTexture;                           // the texture to apply to star tiles
 
@@ -66,7 +67,7 @@ public class RoomSpawner : MonoBehaviour
                 {
                     // floor tiles can be normal floor or stars - floors use different textures
                     case RoomTiles.Floor:
-                        GameObject floorTile = InstantiateTile(roomObject, room.roomType, floorPrefab, currentTilePos_x, currentTilePos_z);
+                        GameObject floorTile = InstantiateTile(roomObject, room.roomType, floorPrefab, currentTilePos_x, currentTilePos_z, false);
 
                         // get the child object (the geometry) and set the texture for this tile
                         Renderer floorTileRenderer = floorTile.GetComponentInChildren<Renderer>();
@@ -77,20 +78,20 @@ public class RoomSpawner : MonoBehaviour
                     // TODO: Need to figure out how to save this data in the RommInfo (store it in the table so we don't have to calculat it?)
                     case RoomTiles.Star:
                         // Instantiated both the tile and the star but the star on y value higher
-                        GameObject starTile = InstantiateTile(roomObject, room.roomType, floorPrefab, currentTilePos_x, currentTilePos_z);
+                        GameObject starTile = InstantiateTile(roomObject, room.roomType, floorPrefab, currentTilePos_x, currentTilePos_z, true);
 
                         // get the child object (the geometry) and set the texture for this tile
                         Renderer starTileRenderer = starTile.GetComponentInChildren<Renderer>();
-                        starTileRenderer.material.mainTexture = starTileTexture;
+                        starTileRenderer.material.SetTexture("_mainTexture", starTileTexture);
 
                         // store the star tile location in the roomInfo structure
-                        room.AddTerminalLocation(new Vector2Int(currentShipTileRow, currentShipTileCol));
+                        room.AddTerminalLocation(new Vector2Int(currentShipTileRow, currentShipTileCol), starTileRenderer);
                         break;
 
                     // Non walkable area
                     // TODO: Add shaders here to make these more like the tiles
                     case RoomTiles.Area:
-                        InstantiateTile(roomObject, room.roomType, tileObjects[0], currentTilePos_x, currentTilePos_z);
+                        InstantiateTile(roomObject, room.roomType, tileObjects[0], currentTilePos_x, currentTilePos_z, false);
 
                         // for placement of the walkable areas in this ship walls are actually empty cells
                         currentGeneratedShip.shipPathingSystem.SetWall(new Vector2Int(currentShipTileRow, currentShipTileCol));
@@ -126,8 +127,10 @@ public class RoomSpawner : MonoBehaviour
     /// <param name="tile">the tile object to spawn</param>
     /// <param name="tilePos_x">the tilePos_x position in the world to spawn this tile</param>
     /// <param name="tilePos_z">the tilePos_z position in the world to spawn this tile</param>
+    /// <param name="isStarTile">if the tile is a star tile, then it uses a different material</param>
+    /// TODO: Could this just be done with changing the shader on this material?
     /// <returns></returns>
-    private GameObject InstantiateTile(GameObject parentObject, RoomType roomType, GameObject tile, float tilePos_x, float tilePos_z)
+    private GameObject InstantiateTile(GameObject parentObject, RoomType roomType, GameObject tile, float tilePos_x, float tilePos_z, bool isStarTile)
     {
         // instantiates the gmae object and saves it as a gameObeject
         GameObject tileObject = Instantiate(tile, new Vector3(tilePos_x, 0, tilePos_z), Quaternion.identity);
@@ -137,7 +140,15 @@ public class RoomSpawner : MonoBehaviour
 
         // make it so it sets up the correct tileMaterials based on room type
         Renderer tileRenderer = tileObject.GetComponentInChildren<Renderer>();
-        tileRenderer.material = tileMaterials[(int)roomType];
+
+        if (isStarTile)
+        {
+            tileRenderer.material = starMaterials[(int)roomType];
+        }
+        else
+        {
+            tileRenderer.material = floorMaterials[(int)roomType];
+        }
 
         return tileObject;
 
