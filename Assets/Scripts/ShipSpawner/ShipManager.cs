@@ -2,7 +2,6 @@
 using System;
 using System.Collections;
 using System.Collections.Generic;
-using System.Linq;
 using TMPro;
 using UnityEngine;
 using UnityEngine.XR;
@@ -10,20 +9,10 @@ using static RoomData;
 
 public class ShipManager : MonoBehaviour
 {
-    // for testing purposes - create an enemy ship struct to hold data for bots to use (eventually will be another ship)
-    public struct EnemyShip
-    {
-        public int distance;                // the distance from our current location (will use wold position later - or hex map locations instead)
-        public int hullDamage;              // only for damage purposes and bot decisions - will be converted to ship modules and how many are slagged
-        public int speed;                   // the speed of a ship can be 0 to 5
-        public int shieldLevel;             // the shield level of this ship
-        public int direction;               // 360 with positive z 0, turning is in 60 degree chunks (cartesian)
-
-        public Vector2Int mapLocation;
-    }
-
     public static int ENEMY_SHIP_MAX_HULL_DAMAGE = 100;
+    public static int COLLISION_DAMAGE = 5;
     public static int MAX_HEX_RANGE = 50;
+    public const int BUFFER_BETWEEN_SHIPS = 10;
 
     private string[] energyLabels = { "Helm", "Guns", "Shld"};
 
@@ -31,7 +20,7 @@ public class ShipManager : MonoBehaviour
     [Header("Ship Generation Elements")]
     [SerializeField] GameManager gameManager;
     [SerializeField] ShipLayoutGenerator shipLayoutGeneratorScript;     // a link to the ship layout generator to call when generate ship is pressed
-    [SerializeField] TMP_Dropdown prebuiltShipList;                     // a list of the prebuilt ships
+    [SerializeField] public TMP_Dropdown botChatterChoice;              // allows user to choose what chatter is being shown
     [SerializeField] public GameObject[] botPrefabs;                    // a link to an the bot prefabs for adding to a ship
 
     // TODO: Think of a way to re-use these for each ship as they go through the AI
@@ -47,6 +36,7 @@ public class ShipManager : MonoBehaviour
     [SerializeField] TMP_Text shipOOCText;
     [SerializeField] TMP_Text[] shipEnergyText;
     [SerializeField] TMP_Text shipScansText;
+    [SerializeField] TMP_Text enemyDistText;
 
     [Header("HUD Elements for enemy ship")]
     [SerializeField] TMP_Text enemyDirectionText;
@@ -55,20 +45,18 @@ public class ShipManager : MonoBehaviour
     [SerializeField] TMP_Text enemyOOCText;
     [SerializeField] TMP_Text[] enemyEnergyText;
     [SerializeField] TMP_Text enemyScansText;
-    [SerializeField] TMP_Text enemyDistText;
-
-    public EnemyShip botTargetPractice = new EnemyShip();
 
     // private variables used by this script
     private RoomSpawner roomSpawner;                                    // A refrence to the class roomSpawner    
     private List<GameObject> shipObjects;                               // GameObject list that stores all the spawned gameObjects to keep things easy to find
     private int currentSpawnShipSize;                                   // A temporary variable to store the ship size until the object is created
+    private int enemyDistance;
 
     //Is a list of the different ship options
-    private List<RoomInfo[,]> shipList = new List<RoomInfo[,]>
+    /*private List<RoomInfo[,]> shipList = new List<RoomInfo[,]>
     {
         RedundantII, Valiant, Fearlight, TentacScout, XeloxianScout, SilicoidScout, CanosianScout, Starbase,
-    };
+    };*/
 
     /// <summary>
     /// Initializes variables for this ship manager
@@ -78,44 +66,36 @@ public class ShipManager : MonoBehaviour
         // assigns the RoomSpawner script for later use
         roomSpawner = gameObject.GetComponent<RoomSpawner>();
 
-        botTargetPractice.distance = 15;             // ships are stationary for now - this is missile hits in three round distance (if I add missiles)
-        botTargetPractice.hullDamage = 0;
-        botTargetPractice.direction = 180;
-        botTargetPractice.speed = 0;
-        botTargetPractice.shieldLevel = 2;
-
-        botTargetPractice.mapLocation = new Vector2Int(10, 15);
-
     } // end Awake
 
     // Temporary to update enemy ship stats. Will eventually use ship systems for second ship
     private void Update()
     {
-        enemySpeedText.text = "Spd = " + botTargetPractice.speed;
-        enemyDamageText.text = "Dmg = " + botTargetPractice.hullDamage;
-        enemyEnergyText[(int)GeneratedShip.ShipPowerAreas.SHIELDS].text = "Shld = " + botTargetPractice.shieldLevel;
-
-        int distance = botTargetPractice.distance;
-
-        if (shipObjects.Count > 0)
+        // continually update distances of ships so we can see the calculations (should be the same)
+        if (gameManager.simulationRunning)
         {
-            Vector2Int currentShipLoc = shipObjects[0].GetComponent<GeneratedShip>().mapLocation;
-            distance = GetDistanceBetweenShips(currentShipLoc, botTargetPractice.mapLocation);
-            botTargetPractice.distance = distance;
+            if (shipObjects.Count > 1) {
+                GeneratedShip heroShip = shipObjects[0].GetComponent<GeneratedShip>();
+                GeneratedShip enemyShip = shipObjects[1].GetComponent<GeneratedShip>();
+
+                int distToEnemy = GetDistanceBetweenShips(enemyShip.mapLocation, heroShip.mapLocation);
+
+                enemyDistText.text = "Enemy Dist: " + distToEnemy;
+
+                // if the distances are too close, move the ships away from each other as if they collided
+                if (distToEnemy == 0)
+                {
+                    UpdateShipDirection(heroShip.shipID, heroShip.currentDirection - 180);
+                    UpdateHullDamage(heroShip.shipID, COLLISION_DAMAGE);
+                    UpdateSpeed(heroShip.shipID, 2);
+
+                    UpdateShipDirection(enemyShip.shipID, enemyShip.currentDirection - 180);
+                    UpdateHullDamage(enemyShip.shipID, COLLISION_DAMAGE);
+                    UpdateSpeed(enemyShip.shipID, 2);
+                }
+            }
         }
-
-        enemyDistText.text = "Enemy Dist: " + distance;
     }
-
-    /// <summary>
-    /// Initialiazes the ship and the rounds
-    /// </summary>
-    public void InitializeShip()
-    {
-        //GenerateShip();
-        GenerateShip(ShipLayoutGenerator.ShipSize.Frigate);
-
-    } // end InitializeShip
 
     /// <summary>
     /// Does the intial set up for the round in phase one for all ships
@@ -152,14 +132,7 @@ public class ShipManager : MonoBehaviour
 
             shipScript.MoveShip();
 
-            if (shipScript.shipID == 0) {
-                // temporary for bot practice - move the enemy closer
-                botTargetPractice.distance -= shipScript.currentSpeed;
-
-                botTargetPractice.distance = Math.Abs(botTargetPractice.distance);
-            }
         }
-
 
     } // end MoveShips
 
@@ -320,11 +293,11 @@ public class ShipManager : MonoBehaviour
     } // end UpdateOutOfControl
 
     /// <summary>
-    /// Updates the helm energy level with to the new value
+    /// Updates the given energy level with to the new value
     /// </summary>
     /// <param name="shipID">The index of the ship that is being adjusted in the list</param>
     /// <param name="energySystem">The energy system to update</param>
-    /// <param name="energyChange">The value to change the helm energy by</param>
+    /// <param name="energyChange">The value to change the energy by</param>
     public void UpdateEnergy(int shipID, int energySystem, int energyChange)
     {
         // only adjust if the ship id is in the list, otherwise it is invalid
@@ -387,36 +360,61 @@ public class ShipManager : MonoBehaviour
     /// Generate a random ship at the origin of the scene
     /// </summary>
     //public void GenerateShip()
-    public void GenerateShip(ShipLayoutGenerator.ShipSize shipType)
+    public void GenerateShips(int[] shipSizes, Vector2Int[] mapLocations)
     {
         ClearShips();
 
-        // Get the room info layout and create the ship - for now only one ship is built
-        //RoomInfo[,] ship = shipLayoutGeneratorScript.GenerateShipLayout();
-        RoomInfo[,] ship = shipLayoutGeneratorScript.GenerateShipLayout(shipType);
-        CreateShip(ship, 0, 0);
+        // go through each ship type and put them in the world offset by the ship sizes starting at 0,0
+        // TODO: Figure a way to split the screen?
+        float worldPosX = 0;
+        float worldPosZ = 0;
+
+        for (int shipID = 0; shipID < shipSizes.Length; shipID++)
+        {
+            RoomInfo[,] ship = shipLayoutGeneratorScript.GenerateShipLayout(shipSizes[shipID]);
+            CreateShip(ship, worldPosX, worldPosZ, mapLocations[shipID]);
+
+            // adjust world size based on the previous ship size - moving it to the right 
+            worldPosX += (ship.GetLength(1) * RoomSpawner.ROOM_WIDTH) + BUFFER_BETWEEN_SHIPS;
+        }
+
+        // Set the targets for the ships so they attack each other - just have them target the one down the line for now
+        for (int shipID = 0; shipID < shipObjects.Count; shipID++)
+        {
+            int targetShipID = shipID + 1;
+
+            // wrap around if we are at the end
+            if (targetShipID >= shipObjects.Count)
+            {
+                targetShipID = 0;
+            }
+
+            shipObjects[shipID].GetComponent<GeneratedShip>().SetTarget(shipObjects[targetShipID].GetComponent<GeneratedShip>());
+        }
 
     } // end GenerateShip
 
     /// <summary>
     /// Creates a ship from the pre-built list at the origin of the scene
     /// </summary>
-    public void CreateShip()
+    /*public void CreateShip()
     {
         ClearShips();
 
         // choose one from the drop down
-        int shipType = prebuiltShipList.value;              //Random.Range(0, shipList.Count);
+        int shipType = prebuiltShipList.value;
         CreateShip(shipList[shipType], 0, 0);
 
-    } // end Create ship at origine
+    } // end Create ship at origin*/
 
     /// <summary>
     /// This method starts the instanition of a ship based
     /// </summary>
+    /// <param name="ship">The ship layout for the ship to generate</param>
     /// <param name="xPos">Where the ship should be placed in the world on the X axis</param>
     /// <param name="zPos">Where the ship should be placed in the world on the Z axis</param>
-    public void CreateShip(RoomInfo[,] ship, float xPos, float zPos)
+    /// <param name="mapLocation">Where to place the ship in the psuedo map for combat</param>
+    public void CreateShip(RoomInfo[,] ship, float xPos, float zPos, Vector2Int mapLocation)
     {
         // create the list of ship game objects if one does not already exist
         if (shipObjects == null)
@@ -443,11 +441,12 @@ public class ShipManager : MonoBehaviour
         // as we add to the end, the id of the ship will be the current count
         int shipID = shipObjects.Count;
         this.shipObjects.Add(shipObject);
+        shipObjects[shipID].GetComponent<GeneratedShip>().SetupBotStuct();
 
         // build the ship
         //Vector3 helmPos = BuildShip(shipId, ship, xPos, zPos);
         BuildShip(shipID, ship, xPos, zPos);
-        shipObjects[shipID].GetComponent<GeneratedShip>().SetupShip(this, ship, shipWorldPos, /*helmPos,*/ shipID, currentSpawnShipSize);
+        shipObjects[shipID].GetComponent<GeneratedShip>().SetupShip(this, ship, shipWorldPos, shipID, currentSpawnShipSize, mapLocation);
 
         // if the ship ID is zero, set the camera to follow the bots on that ship
         gameManager.SetShipCamera();
@@ -455,15 +454,24 @@ public class ShipManager : MonoBehaviour
     } // end CreateShip
 
     /// <summary>
-    /// Returns the ship helm coordinates
+    /// Removes all current ships this manager is dealing with
     /// </summary>
-    /// <param name="shipID">The id of the ship to access</param>
-    /// <returns>The vector 3 position of where to place a player in the helm</returns>
-    /*public Vector3 GetShipHelmPos(int shipId)
+    public void ClearShips()
     {
-        return shipObjects[shipId].GetComponent<GeneratedShip>().shipHelmPos;
+        // only need to clear ships if the list exists
+        if (shipObjects != null)
+        {
+            // for now remove the old ships (if there are any) as this method should only be called from the generate ship buttons
+            for (int i = 0; i < shipObjects.Count; i++)
+            {
+                ClearShip(i);
+            }
 
-    } // end GetShipHelmPos*/
+            // clear out the ship list as well
+            shipObjects.Clear();
+        }
+
+    } // end ClearShips
 
     /// <summary>
     /// Gets the bot of the hero ship so we can follow along with the camera
@@ -488,22 +496,56 @@ public class ShipManager : MonoBehaviour
     } // end SetShipSize
 
     /// <summary>
+    /// Used to show chatter based on ship level
+    /// </summary>
+    /// <param name="shipID">the ship id for chatter - hero is zero, enemy is 1</param>
+    /// <returns></returns>
+    public bool ShowChatter(int shipID)
+    {
+        bool showChatter = false;
+
+        int chatterChoice = botChatterChoice.value;
+
+        // only show if it is turned on
+        if (chatterChoice > 0)
+        {
+            chatterChoice--;
+
+            if (shipID == chatterChoice)
+            {
+                showChatter = true;
+            }
+        }
+
+        return showChatter;
+
+    } // ShowChatter
+
+    /// <summary>
     /// Debug system to show what bots are doing, may change rapidly
     /// </summary>
+    /// <param name="shipID">the id of the ship attempting to display data</param>
     /// <param name="textToDisplay">text to update</param>
-    public void UpdateBotRollText(string textToDisplay)
+    public void UpdateBotRollText(int shipID, string textToDisplay)
     {
-        botRollText.text = textToDisplay;
+        if (ShowChatter(shipID))
+        {
+            botRollText.text = textToDisplay;
+        }
 
     }// end UpdateBotRollText
 
     /// <summary>
     /// Debug system to show what bots are doing, may change rapidly
     /// </summary>
+    /// <param name="shipID">the id of the ship attempting to display data</param>
     /// <param name="textToDisplay">text to update</param>
-    public void UpdateBotStatusText(string textToDisplay)
+    public void UpdateBotStatusText(int shipID, string textToDisplay)
     {
-        botStatusText.text = textToDisplay;
+        if (ShowChatter(shipID))
+        {
+            botStatusText.text = textToDisplay;
+        }
 
     }// end UpdateBotStatusText
 
@@ -520,12 +562,9 @@ public class ShipManager : MonoBehaviour
     /// <param name="ship">The ship as a room information layout array</param>
     /// <param name="worldPos_x">The x world position for the top left of the ship</param>
     /// <param name="worldPos_z">The z world position for the top left of the ship</param>
-    ///// <returns>A vector3 with the ship's helm coordinates</returns>
-    //private Vector3 BuildShip(int shipId, RoomInfo[,] ship, float worldPos_x, float worldPos_z)
     private void BuildShip(int shipID, RoomInfo[,] ship, float worldPos_x, float worldPos_z)
     {
         //Vector3 helmPos = new Vector3(0,0,0);
-        int numLifeSupports = 0;
 
         // set up the grid for bot pathing while building the ship - need to pass it to BuildRoom and have it passed back
         GameObject currentShip = shipObjects[shipID];
@@ -539,10 +578,14 @@ public class ShipManager : MonoBehaviour
             for (int roomCol = 0; roomCol < ship.GetLength(1); roomCol++)
             {
                 // gets the room from the ship array
-                RoomInfo room = ship[roomRow, roomCol];
+                // This is a static room so let's create a new one that is non-static to replace it!
+                RoomInfo staticRoom = ship[roomRow, roomCol];
 
-                if (room != null)
+                if (staticRoom != null)
                 {
+                    // creating a new room to use
+                    RoomInfo room = new RoomInfo(staticRoom.roomName, staticRoom.roomType, staticRoom.roomFacing, staticRoom.moduleType,
+                                                 staticRoom.roomTiles, staticRoom.externalFacing);
                     // calculate the world position for this room to send down
 
                     // as rooms can be offset from other rooms based on location in the ship, set the roomPos_z to the current row times the height of a room
@@ -554,62 +597,45 @@ public class ShipManager : MonoBehaviour
                     // set the world position of this room
                     room.SetRoomWorldPos(new Vector3(roomPos_x, 0, roomPos_z));
 
-                    // if the room is the helm, then set up the helm position
-                    /*if (room.moduleType == ModuleType.Helm)
-                    {
-                        helmPos.x = roomPos_x + TILE_CENTER_OFFSET;
-                        helmPos.z = roomPos_z - TILE_CENTER_OFFSET;
-                    }*/
-
                     // instantiates the room objects based on the strings in the arrays 
                     roomSpawner.BuildRoom(shipObjects[shipID], room, roomRow, roomCol, roomPos_x, roomPos_z);
 
                     // add up the number of life supports so we can store it
                     if (room.moduleType == ModuleType.LifeSupport)
                     {
-                        numLifeSupports++;
+                        currentGeneratedShip.botShipData.LifeSupportModules++;
                     }
+
+                    // store the number of each room type for adding more bots to the ship
+                    if (room.roomType == RoomType.Command) { currentGeneratedShip.botShipData.botRoomTypeCount[(int)GenericBot.BotType.COMMAND]++; }
+                    if (room.roomType == RoomType.Engineering) { currentGeneratedShip.botShipData.botRoomTypeCount[(int)GenericBot.BotType.ENGINEERING]++; }
+                    if (room.roomType == RoomType.Science) { currentGeneratedShip.botShipData.botRoomTypeCount[(int)GenericBot.BotType.SCIENCE]++; }
+                    if (room.roomType == RoomType.Weapons) { currentGeneratedShip.botShipData.botRoomTypeCount[(int)GenericBot.BotType.SECURITY]++; }
+                    if (room.roomType == RoomType.Operations) { currentGeneratedShip.botShipData.botRoomTypeCount[(int)GenericBot.BotType.OPERATIONS]++; }
+
+                    ship[roomRow, roomCol] = room;
                 }
                 // make the entire room a wall if it is null
                 else
                 {
-                    for (int row = 0; row < RoomSpawner.ROOM_HEIGHT; row++)
+                    int shipOffsetGridRow = (roomRow * RoomSpawner.ROOM_HEIGHT);
+                    int shipOffsetGridCol = (roomCol * RoomSpawner.ROOM_WIDTH);
+
+                    for (int tileRow = 0; tileRow < RoomSpawner.ROOM_HEIGHT; tileRow++)
                     {
-                        for (int col = 0; col < RoomSpawner.ROOM_WIDTH; col++)
+                        for (int tileCol = 0; tileCol < RoomSpawner.ROOM_WIDTH; tileCol++)
                         {
-                            currentGeneratedShip.shipPathingSystem.SetWall(new Vector2Int(roomRow + row, roomCol + col));
+                            // the current position of this tile in the walkable area graph
+                            int currentShipTileRow = shipOffsetGridRow + (tileRow);
+                            int currentShipTileCol = shipOffsetGridCol + (tileCol);
+                            currentGeneratedShip.shipPathingSystem.SetWall(new Vector2Int(currentShipTileRow, currentShipTileCol));
                         }
                     }
                 }
             }
         }
 
-        // store the number of life supports for later use by the ship
-        currentGeneratedShip.numLifeSupports = numLifeSupports;
-
-        //return helmPos;
-
     } // end BuildShip
-
-    /// <summary>
-    /// Removes all current ships this manager is dealing with
-    /// </summary>
-    private void ClearShips()
-    {
-        // only need to clear ships if the list exists
-        if (shipObjects != null)
-        {
-            // for now remove the old ships (if there are any) as this method should only be called from the generate ship buttons
-            for (int i = 0; i < shipObjects.Count; i++)
-            {
-                ClearShip(i);
-            }
-
-            // clear out the ship list as well
-            shipObjects.Clear();
-        }
-
-    } // end ClearShip
 
     /// <summary>
     /// for now remove the old ship (if there is one) as this method should only be called from the generate ship buttons

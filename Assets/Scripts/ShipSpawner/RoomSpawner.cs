@@ -113,6 +113,9 @@ public class RoomSpawner : MonoBehaviour
             }
         }
 
+        // once all tiles are placed, we know how many terminals there are so create the array showing them as unoccupied
+        room.InitOccupied();
+
     } // end BuildRoom
 
     /// <summary>

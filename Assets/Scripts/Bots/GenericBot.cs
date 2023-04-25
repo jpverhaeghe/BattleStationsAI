@@ -1,7 +1,6 @@
 using AlanZucconi.AI.PF;
 using System.Collections;
 using System.Collections.Generic;
-using Unity.VisualScripting;
 using UnityEngine;
 
 public class GenericBot : MonoBehaviour
@@ -24,7 +23,14 @@ public class GenericBot : MonoBehaviour
     }
 
     // constant variables for this bot
-    public static RoomData.ModuleType[] modules = { RoomData.ModuleType.CargoBay, RoomData.ModuleType.LifeSupport };
+    public static RoomData.ModuleType[][] botModuleTypes =
+    {
+        new RoomData.ModuleType[] { RoomData.ModuleType.Helm },                                         // Command
+        new RoomData.ModuleType[] { RoomData.ModuleType.Engine },                                       // Engineering
+        new RoomData.ModuleType[] { RoomData.ModuleType.Science, RoomData.ModuleType.Hyperdrive },      // Science
+        new RoomData.ModuleType[] { RoomData.ModuleType.Cannon, RoomData.ModuleType.MissileBay },       // Security
+        new RoomData.ModuleType[] { RoomData.ModuleType.CargoBay, RoomData.ModuleType.LifeSupport },    // Operations
+    };
 
     // constant values used by other classes (specifically sub-classes)
     public static int PROFESSION_SKILL_VALUE = 3;                   // starting value for the profession the bot is trained in
@@ -176,12 +182,12 @@ public class GenericBot : MonoBehaviour
         // if the difficulty is above 2 x NUM_DIE_SIDES it fails automatically
         if (difficulty > (2 * NUM_DIE_SIDES))
         {
-            myShip.shipManagerScript.UpdateBotRollText(this.myType + " had a automatic failure");
+            myShip.shipManagerScript.UpdateBotRollText(myShip.shipID, this.myType + " had a automatic failure");
             return false;
         }
         else if (difficulty < 2)
         {
-            myShip.shipManagerScript.UpdateBotRollText(this.myType + " had a automatic success");
+            myShip.shipManagerScript.UpdateBotRollText(myShip.shipID, this.myType + " had a automatic success");
             return true;
         }
 
@@ -210,7 +216,7 @@ public class GenericBot : MonoBehaviour
             checkResult = firstRoll + secondRoll;
         }
 
-        myShip.shipManagerScript.UpdateBotRollText("Bot performed a check: " + checkResult + " vs. difficulty of " + difficulty);
+        myShip.shipManagerScript.UpdateBotRollText(myShip.shipID, "Bot performed a check: " + checkResult + " vs. difficulty of " + difficulty);
         //Debug.Log("Bot performed a check: " +  checkResult + " vs. difficulty of " + difficulty);
         return (checkResult >= difficulty);
 
@@ -225,6 +231,24 @@ public class GenericBot : MonoBehaviour
         return (Random.Range(0, NUM_DIE_SIDES) + 1);
 
     } // end RollDie
+
+    /// <summary>
+    /// Gets the distance to the current target
+    /// </summary>
+    /// <returns>The distance to the target or -1 if the target was invalid</returns>
+    public int GetDistanceToTarget()
+    {
+        int distanceToTarget = -1;
+
+        if (myShip.currentTarget != null)
+        { 
+            Vector2Int targetPos = myShip.currentTarget.mapLocation;
+            distanceToTarget = myShip.shipManagerScript.GetDistanceBetweenShips(myShip.mapLocation, targetPos);
+        }
+
+        return distanceToTarget;
+
+    } // end GetDistanceToTarget
 
     /// <summary>
     /// Attempts to increase the difficulty of changing engine energy levls if it is feasible

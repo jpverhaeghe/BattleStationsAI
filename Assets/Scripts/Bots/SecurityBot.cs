@@ -2,7 +2,6 @@ using AlanZucconi.AI.PF;
 using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
-using UnityEngine.XR;
 
 public class SecurityBot : GenericBot
 {
@@ -17,8 +16,6 @@ public class SecurityBot : GenericBot
     }
 
     // constant variables for this bot
-    public static RoomData.ModuleType[] modules = { RoomData.ModuleType.Cannon, RoomData.ModuleType.MissileBay };
-
     public const int SPEED_MULTIPLIER = 2;                          // the speed multiplier of the other ship
     public const int CANNON_FIRING_ARC = 180;                       // the area the cannon can hit from its facing (may not use)
     public const int MIN_POWER_LEVEL_TO_FIRE = 2;                   // the minimum power level we will need to fire a weapon
@@ -79,6 +76,8 @@ public class SecurityBot : GenericBot
         // go through the modules to see if one is working and set the available module types
         RoomInfo moduleNeedingRepairs = null;
         int numBrokenModules = 0;
+        int mostNumUsedCannonMarkers = int.MaxValue;
+        int mostNumUsedMissileMarkers = int.MaxValue;
 
         // track modules for firing
         RoomInfo cannonToFire = null;
@@ -94,20 +93,28 @@ public class SecurityBot : GenericBot
             }
             else
             {
-                if ( (cannonToFire == null) && (module.moduleType == RoomData.ModuleType.Cannon))
+                if (module.moduleType == RoomData.ModuleType.Cannon) 
                 {
-                    cannonToFire = module;
+                    if ((cannonToFire == null) || (module.GetNumUsedMarkers() < mostNumUsedCannonMarkers))
+                    {
+                        cannonToFire = module;
+                        mostNumUsedCannonMarkers = module.GetNumUsedMarkers();
+                    }
                 }
 
-                if ((missileToFire == null) && (module.moduleType == RoomData.ModuleType.MissileBay))
+                if (module.moduleType == RoomData.ModuleType.MissileBay) 
                 {
-                    missileToFire = module;
+                    if ((missileToFire == null) || (module.GetNumUsedMarkers() < mostNumUsedMissileMarkers))
+                    {
+                        missileToFire = module;
+                        mostNumUsedMissileMarkers = module.GetNumUsedMarkers();
+                    }
                 }
             }
         }
 
         // only go to fire a weapon if there is energy
-        if (currentShipWeaponsLevel > MIN_POWER_LEVEL_TO_FIRE)
+        if ((myShip.currentTarget != null) &&(currentShipWeaponsLevel >= MIN_POWER_LEVEL_TO_FIRE))
         {
             isFiring = FireWeapon(cannonToFire, missileToFire);
         }
@@ -161,11 +168,11 @@ public class SecurityBot : GenericBot
                 {
                     // apply damage and reduce shield level of target by one for the hit
                     int damage = GetCannonDamage();
-                    myShip.shipManagerScript.botTargetPractice.hullDamage += damage;
-                    myShip.shipManagerScript.botTargetPractice.shieldLevel -= 1;
-                    if (myShip.shipManagerScript.botTargetPractice.shieldLevel < 0)
-                        myShip.shipManagerScript.botTargetPractice.shieldLevel = 0;
-                    myShip.shipManagerScript.UpdateBotStatusText("Cannon fired with success and did " + damage + " damage!");
+
+                    myShip.shipManagerScript.UpdateHullDamage(myShip.currentTarget.shipID, damage);
+                    myShip.shipManagerScript.UpdateEnergy(myShip.currentTarget.shipID, (int)GeneratedShip.ShipPowerAreas.SHIELDS, 1);
+
+                    myShip.shipManagerScript.UpdateBotStatusText(myShip.shipID, "Cannon fired with success and did " + damage + " damage!");
                     //Debug.Log("Cannon fired with success and did " + damage + " damage!");
                 }
 
@@ -183,11 +190,10 @@ public class SecurityBot : GenericBot
                 // TODO: create missile object that is at speed 6 and moves towards target (for now just do Hull damage)
                 if (PerformActionCheck(actionDifficulty))
                 {
-                    myShip.shipManagerScript.botTargetPractice.hullDamage += hullDamage;
-                    myShip.shipManagerScript.botTargetPractice.shieldLevel -= 1;
-                    if (myShip.shipManagerScript.botTargetPractice.shieldLevel < 0)
-                        myShip.shipManagerScript.botTargetPractice.shieldLevel = 0;
-                    myShip.shipManagerScript.UpdateBotStatusText("Missile fired with success and did " + hullDamage + " damage!");
+                    myShip.shipManagerScript.UpdateHullDamage(myShip.currentTarget.shipID, hullDamage);
+                    myShip.shipManagerScript.UpdateEnergy(myShip.currentTarget.shipID, (int)GeneratedShip.ShipPowerAreas.SHIELDS, 1);
+                    
+                    myShip.shipManagerScript.UpdateBotStatusText(myShip.shipID, "Missile fired with success and did " + hullDamage + " damage!");
                     //Debug.Log("Missile fired with success and did " + hullDamage + " damage!");
                 }
                 // if a missile firing fails, then it does damage to our ship!
@@ -195,7 +201,7 @@ public class SecurityBot : GenericBot
                 {
                     //myShip.hullDamage += hullDamage;
                     myShip.shipManagerScript.UpdateHullDamage(myShip.shipID, hullDamage);
-                    myShip.shipManagerScript.UpdateBotStatusText("!!!Missile failed to fire, it exploded and did " + hullDamage + " damage to your ship!!!");
+                    myShip.shipManagerScript.UpdateBotStatusText(myShip.shipID, "!!!Missile failed to fire, it exploded and did " + hullDamage + " damage to your ship!!!");
                     //Debug.Log("!!!Missile faild to fire, it exploded and did " + hullDamage + " damage to your ship!!!");
                 }
 
@@ -254,7 +260,7 @@ public class SecurityBot : GenericBot
                 }
 
                 // for now we are using the targetbot, but will need to figure out target ship
-                Vector2Int targetPos = myShip.shipManagerScript.botTargetPractice.mapLocation;
+                Vector2Int targetPos = myShip.currentTarget.mapLocation;
                 bool canTarget = true;
 
                 // since a cannon can shoot in 180 degree arc, we only need to look at one component per facing
@@ -274,8 +280,8 @@ public class SecurityBot : GenericBot
                 }
 
                 // difficulty of cannon to succeed is (distance from ship + 2 x otherShipSpeed + 3 x num used markers on cannon - combat skill)
-                actionDifficulty = myShip.shipManagerScript.botTargetPractice.distance;
-                actionDifficulty += myShip.shipManagerScript.botTargetPractice.speed * SPEED_MULTIPLIER;
+                actionDifficulty = GetDistanceToTarget();
+                actionDifficulty += myShip.currentTarget.currentSpeed * SPEED_MULTIPLIER;
             }
             else
             {
@@ -318,9 +324,11 @@ public class SecurityBot : GenericBot
         // TODO: Add hit location to this so we can add damage markers to ships and damage bots
         // (may not do damage to bots due to time constraints)
 
+        // get the target shield level
+        int targetShieldLevels = myShip.currentTarget.energySystemLevels[(int)GeneratedShip.ShipPowerAreas.SHIELDS];
+
         // cannon hullDamage is based on a number of dice rolled equal to the ships weapon level + the targets shield level
-        int numDiceToRoll = (myShip.energySystemLevels[(int)GeneratedShip.ShipPowerAreas.WEAPONS] + 
-                             myShip.shipManagerScript.botTargetPractice.shieldLevel);
+        int numDiceToRoll = (myShip.energySystemLevels[(int)GeneratedShip.ShipPowerAreas.WEAPONS] + targetShieldLevels);
 
         List<int> damageRolls = new List<int>();
 
@@ -335,7 +343,7 @@ public class SecurityBot : GenericBot
         damageRolls.Reverse();
 
         // remove the highest numbers for the shield level
-        for (int i = 0; i < myShip.shipManagerScript.botTargetPractice.shieldLevel; i++)
+        for (int i = 0; i < targetShieldLevels; i++)
         {
             damageRolls.RemoveAt(0);
         }

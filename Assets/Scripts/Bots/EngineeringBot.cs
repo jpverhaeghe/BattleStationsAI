@@ -1,9 +1,7 @@
 using AlanZucconi.AI.PF;
 using System.Collections;
 using System.Collections.Generic;
-using System.Security.Permissions;
 using UnityEngine;
-using UnityEngine.XR;
 
 public class EngineeringBot : GenericBot
 {
@@ -16,8 +14,6 @@ public class EngineeringBot : GenericBot
     }
 
     // constant variables for this bot
-    public static RoomData.ModuleType[] modules = { RoomData.ModuleType.Engine };
-
     public const int ENGINE_CHANGE_BASE_DIFFICULTY = 8;         // the minimum difficulty for pumping an engine
     public const int MIN_POWER_LEVELS_TO_TRANSFER = 5;          // the minimum total power before performing a transfer
 
@@ -76,6 +72,7 @@ public class EngineeringBot : GenericBot
         // go through the modules to see if one is working and set the available module types
         RoomInfo moduleNeedingRepairs = null;
         int numBrokenModules = 0;
+        int mostNumUsedMarkers = int.MaxValue;
 
         foreach (RoomInfo module in myModules)
         {
@@ -87,7 +84,11 @@ public class EngineeringBot : GenericBot
             }
             else
             {
-                moduleToActOn = module;
+                if (module.GetNumUsedMarkers() < mostNumUsedMarkers)
+                {
+                    moduleToActOn = module;
+                    mostNumUsedMarkers = module.GetNumUsedMarkers();
+                }
             }
         }
 
@@ -130,7 +131,7 @@ public class EngineeringBot : GenericBot
                     GeneratedShip.ShipPowerAreas areaToAdjust = myShip.energyUpdateQueue.Dequeue();
 
                     myShip.shipManagerScript.UpdateEnergy(myShip.shipID, (int)areaToAdjust, adjustmentLevel);
-                    myShip.shipManagerScript.UpdateBotStatusText("Engines pumped successfully, added " + adjustmentLevel + " power to " + areaToAdjust.ToString() + "!");
+                    myShip.shipManagerScript.UpdateBotStatusText(myShip.shipID, "Engines pumped successfully, added " + adjustmentLevel + " power to " + areaToAdjust.ToString() + "!");                    
                     //Debug.Log("Engines pumped successfully, added " + adjustmentLevel + " power to " + areaToAdjust.ToString() + "!");
                 }
 
@@ -283,7 +284,8 @@ public class EngineeringBot : GenericBot
         {
             myShip.shipManagerScript.UpdateEnergy(myShip.shipID, (int)areaToAdjust, adjustmentLevel);
             myShip.shipManagerScript.UpdateEnergy(myShip.shipID, (int)areaToTake, -adjustmentLevel);
-            myShip.shipManagerScript.UpdateBotStatusText(adjustmentLevel + " power transfered from " + areaToTake.ToString() + " to " + areaToAdjust.ToString() + "!");
+
+            myShip.shipManagerScript.UpdateBotStatusText(myShip.shipID, adjustmentLevel + " power transfered from " + areaToTake.ToString() + " to " + areaToAdjust.ToString() + "!");
             //Debug.Log(adjustmentLevel + " power transfered from " + areaToTake.ToString() + " to " + areaToAdjust.ToString() + "!");
         }
 

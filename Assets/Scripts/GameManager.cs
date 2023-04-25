@@ -9,6 +9,9 @@ public class GameManager : MonoBehaviour
     private const int NUM_PHASES = 6;                               // the number of phases in a round
     private const int TIME_PER_PHASE = 3;                           // time to wait between phases in seconds
 
+    // public variables used by other scripts (helps control the game :)
+    public bool simulationRunning;
+
     // Serialized fields for this script
     [Header("Camearas for switching bot perspecitves")]
     [SerializeField] Camera shipCamera;
@@ -16,6 +19,12 @@ public class GameManager : MonoBehaviour
 
     [Header("Elements to ship creation and updating")]
     [SerializeField] ShipManager shipManager;
+    [SerializeField] TMP_Dropdown heroShipSizes;
+    [SerializeField] TMP_Dropdown enemyShipSizes;
+
+    [Header("HUD Elements to show/hide based on phase")]
+    [SerializeField] GameObject simulationSelectionUI;
+    [SerializeField] GameObject simulationInfoUI;
 
     [Header("HUD Elements to keep track current round and phase")]
     [SerializeField] TMP_Text currentRoundText;
@@ -32,7 +41,7 @@ public class GameManager : MonoBehaviour
     /// </summary>
     void Start()
     {
-        StartGame();
+        simulationRunning = false;
 
     } // end Start
 
@@ -41,13 +50,16 @@ public class GameManager : MonoBehaviour
     /// </summary>
     void Update()
     {
-        // Added a timer for now, eventually this will call the bot systems from the Ship Manager and they will perform actions
-        timer += Time.deltaTime;
-
-        if (timer > TIME_PER_PHASE)
+        if (simulationRunning)
         {
-            timer = 0;
-            DoPhases();
+            // Added a timer for now, eventually this will call the bot systems from the Ship Manager and they will perform actions
+            timer += Time.deltaTime;
+
+            if (timer > TIME_PER_PHASE)
+            {
+                timer = 0;
+                DoPhases();
+            }
         }
 
     } // end Update
@@ -55,9 +67,26 @@ public class GameManager : MonoBehaviour
     /// <summary>
     /// Sets up and starts the game
     /// </summary>
-    public void StartGame()
+    public void StartSimulation()
     {
-        shipManager.InitializeShip();
+        // hide the ship selection buttons
+        simulationSelectionUI.SetActive(false);
+
+        // show the simulation UI
+        simulationInfoUI.SetActive(true);
+
+        // create an array of the ship sizes
+        int[] shipSizes = { heroShipSizes.value, enemyShipSizes.value };
+
+        // place the ships on the map (random to start)
+        // TODO: Expose this so a user can move them around
+        Vector2Int[] mapLocations = { 
+            new Vector2Int(Random.Range(0, ShipManager.MAX_HEX_RANGE), Random.Range(0, ShipManager.MAX_HEX_RANGE)),
+            new Vector2Int(Random.Range(0, ShipManager.MAX_HEX_RANGE), Random.Range(0, ShipManager.MAX_HEX_RANGE))
+        };
+
+        // spawn the ships
+        shipManager.GenerateShips(shipSizes, mapLocations);
 
         // set up the first round and phase information (not zero based)
         currentPhase = 0;
@@ -66,7 +95,27 @@ public class GameManager : MonoBehaviour
         currentRound = 0;
         UpdateRound();
 
+        simulationRunning = true;
+
     } // end StartGame
+
+    /// <summary>
+    /// Ends the current simulation
+    /// </summary>
+    public void EndSimulation()
+    {
+        // Destroy the ships
+        shipManager.ClearShips();
+
+        // Hide the simulation UI
+        simulationInfoUI.SetActive(false);
+
+        // Show the ship choice UI
+        simulationSelectionUI.SetActive(true);
+
+        simulationRunning = false;
+
+    } // end EndSimulation
 
     private void DoPhases()
     {
@@ -131,7 +180,7 @@ public class GameManager : MonoBehaviour
     public void SetShipCamera()
     {
         // set up the bot to follow at the beginning
-        shipCamera.GetComponent<FollowBot>().SetBotToFollow(shipManager.GetBotToFollow() );
+        //shipCamera.GetComponent<CameraMovement>().SetBotToFollow(shipManager.GetBotToFollow() );
 
     } // end SetShipCamera
 

@@ -14,8 +14,6 @@ public class ScienceBot : GenericBot
         WAIT
     }
     // constant variables for this bot
-    public static RoomData.ModuleType[] modules = { RoomData.ModuleType.Science, RoomData.ModuleType.Hyperdrive };
-
     private const int MIN_POWER_LEVEL_TO_REQUEST = 2;               // the minimum power level - request more when it is below here
     private const int MAX_POWER_LEVEL_TO_REQUEST = 4;               // the maximum power level - don't request more when it is above here
 
@@ -70,6 +68,7 @@ public class ScienceBot : GenericBot
         // go through the modules to see if one is working and set the available module types
         RoomInfo moduleNeedingRepairs = null;
         int numBrokenModules = 0;
+        int mostNumUsedMarkers = int.MaxValue;
 
         // keep track of broken science bays, if all are broken, no more shields!
         int numScienceModules = 0;
@@ -97,15 +96,22 @@ public class ScienceBot : GenericBot
             {
                 // only acting on science modules for now
                 if (module.moduleType == RoomData.ModuleType.Science)
-                { 
-                    moduleToActOn = module; 
+                {
+                    if (module.GetNumUsedMarkers() < mostNumUsedMarkers)
+                    {
+                        moduleToActOn = module;
+                        mostNumUsedMarkers = module.GetNumUsedMarkers();
+                    }
                 }
             }
         }
 
         if (numScienceModules > numBrokenScienceModules)
         {
-            isScanning = PerformScan();
+            if (myShip.currentTarget != null)
+            {
+                isScanning = PerformScan();
+            }
 
             // else request energy if we are not firing and are not at our best power for weapons
             // (Cannon hullDamage is more effective with more power)
@@ -162,7 +168,7 @@ public class ScienceBot : GenericBot
                 if (PerformActionCheck(actionDifficulty))
                 {
                     myShip.shipManagerScript.UpdateNumScans(myShip.shipID, adjustmentLevel);
-                    myShip.shipManagerScript.UpdateBotStatusText("Ship scans successfully adjusted by " + adjustmentLevel);
+                    myShip.shipManagerScript.UpdateBotStatusText(myShip.shipID, "Ship scans successfully adjusted by " + adjustmentLevel);
                     //Debug.Log("Ship scans successfully adjusted by " + adjustmentLevel);
                 }
 
@@ -175,7 +181,7 @@ public class ScienceBot : GenericBot
                 // if the action succeeds, find the area to transfer to and pull from any of the others (based on bigger levels)
                 if (PerformActionCheck(actionDifficulty))
                 {
-                    myShip.shipManagerScript.UpdateBotStatusText("ECM successfully launched");
+                    myShip.shipManagerScript.UpdateBotStatusText(myShip.shipID, "ECM successfully launched");
                     //Debug.Log("ECM successfully launched");
                 }
 
@@ -215,7 +221,7 @@ public class ScienceBot : GenericBot
 
             // calculate the difficulty - as scans are used for re-rolling checks, we want as many as we can have
             // Difficulty is distance to scanned object / 2 (rounded up) + 3 for each additional scan this action
-            actionDifficulty = (int)Mathf.Ceil(myShip.shipManagerScript.botTargetPractice.distance / 2.0f);
+            actionDifficulty = (int)Mathf.Ceil(GetDistanceToTarget() / 2.0f);
             actionDifficulty += moduleToActOn.GetNumUsedMarkers() * ADD_OR_USED_MULTIPLIER;
 
             // if we can scan more, we should - re-rolls are good!

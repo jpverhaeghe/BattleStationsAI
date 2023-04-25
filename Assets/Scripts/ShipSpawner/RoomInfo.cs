@@ -19,7 +19,7 @@ public class RoomInfo
     private Vector3 roomWorldPos;
     private int numUsedMarkers = 0;
     private bool broken = false;
-    private bool occupied = false;
+    private bool[] occupiedTerminals;
 
     /// <summary>
     /// the constructor for this class
@@ -156,22 +156,70 @@ public class RoomInfo
     } // end RepairModule
 
     /// <summary>
-    /// Checks to see if this module already has a bot in it (for larger ships with other bots that need placing)
+    /// Sets up the boolean array that lets bots know if terminals are occupied
     /// </summary>
-    /// <returns>true if a bot has bee instantiated in this module, false otherwise</returns>
-    public bool IsOccupied()
-    { 
-        return occupied; 
+    public void InitOccupied()
+    {
+        occupiedTerminals = new bool[terminalLocations.Count];
 
-    } // end IsOccupied
+    } // end InitOccupied
 
     /// <summary>
-    /// Sets this module as occupied
+    /// Goes through the terminal spots and grabs the first open one, -1 if all occupied
     /// </summary>
-    public void SetOccupied()
+    /// <returns>The first open terminal id or -1 if none available</returns>
+    public int GetUnoccupiedTerminal()
     {
-        occupied = true;
+        // go through the terminals and get the first unoccupied one
+        for (int i = 0; i < terminalLocations.Count; i++)
+        {
+            if (!occupiedTerminals[i])
+            {
+                return i;
+            }
+        }
 
-    } // end SetOccupied
+        return -1;
+
+    } // end GetUnoccupiedTerminal
+
+    /// <summary>
+    /// Checks to see if this module has all terminals fully in use
+    /// </summary>
+    /// <returns>true if all terminals full, false otherwise</returns>
+    public bool IsFullyOccupied()
+    {
+        return (GetUnoccupiedTerminal() == -1);
+
+    } // end IsFullyOccupied
+
+    /// <summary>
+    /// Checks to see if a specific terminal ID is in use
+    /// </summary>
+    /// <param name="terminalID">The terminal ID to check</param>
+    /// <returns>true if a bot is using the spot, false otherwise (or if the id is invalid)</returns>
+    public bool IsTerminalOccupied(int terminalID)
+    {
+        if (terminalID < terminalLocations.Count)
+        {
+            return (occupiedTerminals[terminalID]);
+        }
+
+        return false;
+
+    } // end IsTerminalOccupied
+
+    /// <summary>
+    /// Sets the terminal specified as occupied - does nothing if the id was invalid
+    /// <param name="terminalID">The terminal ID to set</param>
+    /// </summary>
+    public void SetTerminalOccupied(int terminalID)
+    {
+        if (terminalID < terminalLocations.Count)
+        {
+            occupiedTerminals[terminalID] = true;
+        }
+
+    } // end SetTerminalOccupied
 
 }

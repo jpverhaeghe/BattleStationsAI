@@ -1,10 +1,7 @@
 using AlanZucconi.AI.PF;
 using System.Collections;
 using System.Collections.Generic;
-using System.Security.Permissions;
-using Unity.VisualScripting;
 using UnityEngine;
-using UnityEngine.XR;
 
 public class CommandBot : GenericBot
 {
@@ -19,8 +16,6 @@ public class CommandBot : GenericBot
     }
 
     // constant variables for this bot
-    public static RoomData.ModuleType[] modules = { RoomData.ModuleType.Helm };
-
     private const int MIN_DIST_TO_ADD_SPEED = 6;                    // the distance where we add speed or start braking...
     private const int MAX_POWER_LEVEL_TO_REQUEST = 4;               // the maximum power level - don't request more when it is here
 
@@ -75,6 +70,7 @@ public class CommandBot : GenericBot
         // go through the modules to see if one is working and set the available module types
         RoomInfo moduleNeedingRepairs = null;
         int numBrokenModules = 0;
+        int mostNumUsedMarkers = int.MaxValue;
 
         foreach (RoomInfo module in myModules)
         {
@@ -86,11 +82,19 @@ public class CommandBot : GenericBot
             }
             else
             {
-                moduleToActOn = module;
+                if (module.GetNumUsedMarkers() < mostNumUsedMarkers)
+                {
+                    moduleToActOn = module;
+                    mostNumUsedMarkers = module.GetNumUsedMarkers();
+                }
             }
         }
 
-        isManeurving = CheckManeuvers();
+        // only maneuver if there is a target
+        if (myShip.currentTarget != null)
+        {
+            isManeurving = CheckManeuvers();
+        }
 
         // else request energy if we are not firing and are not at our best power for weapons
         // (Cannon hullDamage is more effective with more power)
@@ -138,7 +142,7 @@ public class CommandBot : GenericBot
                 if (PerformActionCheck(actionDifficulty))
                 {
                     myShip.shipManagerScript.UpdateSpeed(myShip.shipID, adjustmentLevel);
-                    myShip.shipManagerScript.UpdateBotStatusText("Speed successfully adjusted by " + adjustmentLevel);
+                    myShip.shipManagerScript.UpdateBotStatusText(myShip.shipID, "Speed successfully adjusted by " + adjustmentLevel);
                     //Debug.Log("Speed successfully adjusted by " + adjustmentLevel);
                 }
 
@@ -152,8 +156,9 @@ public class CommandBot : GenericBot
                 if (PerformActionCheck(actionDifficulty))
                 {
                     myShip.shipManagerScript.UpdateShipDirection(myShip.shipID, adjustmentLevel);
-                    myShip.shipManagerScript.UpdateBotStatusText("Direction successfully adjusted by " + adjustmentLevel);
                     myShip.requestedFacing = -1;
+
+                    myShip.shipManagerScript.UpdateBotStatusText(myShip.shipID, "Direction successfully adjusted by " + adjustmentLevel);
                     //Debug.Log("Direction successfully adjusted by " + adjustmentLevel);
                 }
 
@@ -193,7 +198,8 @@ public class CommandBot : GenericBot
         actionDifficulty -= piloting;
 
         // check to see if we are facing our target first, if not, time to turn
-        Vector2Int targetPos = myShip.shipManagerScript.botTargetPractice.mapLocation;
+        Vector2Int targetPos = myShip.currentTarget.mapLocation;
+        int distanceToTarget = GetDistanceToTarget();
         bool facingTarget = false;
 
         // check to see if it is 
@@ -212,18 +218,18 @@ public class CommandBot : GenericBot
             adjustmentLevel = SINGLE_DIRECTION_CHANGE;
         }
         // first off, check the distance from the other ship. We can't shoot it effectively if we aren't close enough
-        else if (myShip.shipManagerScript.botTargetPractice.distance != MIN_DIST_TO_ADD_SPEED)
+        else if (distanceToTarget != MIN_DIST_TO_ADD_SPEED)
         {
-            if ((myShip.shipManagerScript.botTargetPractice.distance > MIN_DIST_TO_ADD_SPEED) &&
-                 (myShip.currentSpeed < MAX_SPEED))
+            if ((distanceToTarget > MIN_DIST_TO_ADD_SPEED) &&
+                    (myShip.currentSpeed < MAX_SPEED))
             {
                 isManeuvering = true;
                 actionToTake = CommandActions.ADJUST_SPEED;
                 adjustmentLevel = 1;
             }
 
-            if ( (myShip.shipManagerScript.botTargetPractice.distance < MIN_DIST_TO_ADD_SPEED) && 
-                 (myShip.currentSpeed > 0))
+            if ((distanceToTarget < MIN_DIST_TO_ADD_SPEED) &&
+                    (myShip.currentSpeed > 0))
             {
                 isManeuvering = true;
                 actionToTake = CommandActions.ADJUST_SPEED;
