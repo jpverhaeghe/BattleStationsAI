@@ -166,7 +166,7 @@ public class GenericBot : MonoBehaviour
         // calculate the grid position based off the world position and ship position
         // Z is the row and is negative, X is the column and is positive
         gridPos.x = (int)(myShip.shipWorldOrigin.z - gameObject.transform.position.z);
-        gridPos.y = (int)(myShip.shipWorldOrigin.x + gameObject.transform.position.x);
+        gridPos.y = (int)(gameObject.transform.position.x - myShip.shipWorldOrigin.x);
 
         return gridPos;
 
@@ -428,7 +428,7 @@ public class GenericBot : MonoBehaviour
         while (!newTerminalFound && ((newModule != currentModule) || (newTerminal != currentTerminal)))
         {
             // reset back to zero if the index is larger than the number of terminal locations
-            if (newTerminal >= myModules[currentModule].GetTerminalLoacations().Count)
+            if (newTerminal >= myModules[newModule].GetTerminalLoacations().Count)
             {
                 newTerminal = 0;
 
@@ -447,9 +447,11 @@ public class GenericBot : MonoBehaviour
             {
                 newTerminalFound = true;
             }
-
-            // increase the terminal location index 
-            newTerminal++;
+            else
+            {
+                // increase the terminal location index 
+                newTerminal++; 
+            }            
         }
 
         if (newTerminalFound) 
