@@ -79,6 +79,9 @@ public class GameManager : MonoBehaviour
         // hide the ship selection buttons
         simulationSelectionUI.SetActive(false);
 
+        // reset the text boxes for the ships for the next sim
+        shipManager.ResetShipDataText();
+
         // show the simulation UI
         simulationInfoUI.SetActive(true);
 

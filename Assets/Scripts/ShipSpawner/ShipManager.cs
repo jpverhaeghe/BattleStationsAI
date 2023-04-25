@@ -149,7 +149,7 @@ public class ShipManager : MonoBehaviour
                 enemyShip.currentTarget = null;
             }
             // did the enemy ship lose?
-            else if (enemyShip.hullDamage >= DAMAGE_TO_LOSE)
+            else if (enemyShip.hullDamage >= damageMax)
             {
                 shipDestroyed = 1;
                 heroShip.currentTarget = null;
@@ -161,7 +161,7 @@ public class ShipManager : MonoBehaviour
             // stop al messages and post a message
             botRollText.text = shipObjects[shipDestroyed].name + " was destroyed. Simulation ending!";
             botChatterChoice.value = 0;
-
+            
             // Destroy the ship object that was destryoed
             ClearShip(shipDestroyed);
         }
@@ -169,6 +169,45 @@ public class ShipManager : MonoBehaviour
         return (shipDestroyed >= 0);
 
     } //end CheckEndSimulation
+
+    /// <summary>
+    /// Resets all the ship data text to the original data so it doesn't look like the sim is still running after
+    /// we end a simulation
+    /// </summary>
+    public void ResetShipDataText()
+    {
+        // Hero ship data text
+        shipDirectionText.text = "Dir = " + 0;
+        shipDamageText.text = "Dmg = " + 0;
+        shipSpeedText.text = "Spd = " + 0;
+        shipOOCText.text = "OOC = " + 0;
+        
+        for (int i = 0; i < shipEnergyText.Length; i++)
+        {
+            shipEnergyText[i].text = energyLabels[i] + " = " + 0;
+        }
+
+        shipScansText.text = "Scn = " + 0;
+        enemyDistText.text = "Enemy Dist: " + 0;
+
+        // enemy ship data text
+        enemyDirectionText.text = "Dir = " + 0;
+        enemyDamageText.text = "Dmg = " + 0;
+        enemySpeedText.text = "Spd = " + 0;
+        enemyOOCText.text = "OOC = " + 0;
+
+        for (int i = 0; i < shipEnergyText.Length; i++)
+        {
+            enemyEnergyText[i].text = energyLabels[i] + " = " + 0;
+        }
+
+        enemyScansText.text = "Scn = " + 0;
+
+        // the chatter data
+        botRollText.text = "";
+        botStatusText.text = "";
+
+    } // end ResetShipDataText
 
     /// <summary>
     /// Move the generated ships along their direction in the hypothetical map
