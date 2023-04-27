@@ -4,7 +4,6 @@ using System.Collections;
 using System.Collections.Generic;
 using TMPro;
 using UnityEngine;
-using UnityEngine.XR;
 using static RoomData;
 
 public class ShipManager : MonoBehaviour
@@ -47,6 +46,9 @@ public class ShipManager : MonoBehaviour
     [SerializeField] TMP_Text enemyOOCText;
     [SerializeField] TMP_Text[] enemyEnergyText;
     [SerializeField] TMP_Text enemyScansText;
+
+    [Header("Audio clips for battle sounds")]
+    [SerializeField] AudioClip[] battleSounds;
 
     // private variables used by this script
     private RoomSpawner roomSpawner;                                    // A refrence to the class roomSpawner    
@@ -640,6 +642,16 @@ public class ShipManager : MonoBehaviour
         }
 
     }// end UpdateBotStatusText
+
+    /// <summary>
+    /// Plays the audio clip for the given id
+    /// </summary>
+    /// <param name="clipToPlay"></param>
+    public void playAudioClip(int clipToPlay)
+    {
+        gameObject.GetComponent<AudioSource>().PlayOneShot(battleSounds[clipToPlay]);
+
+    } // end playAudioClip
 
     public int GetDistanceBetweenShips(Vector2Int shipA, Vector2Int shipB)
     {
