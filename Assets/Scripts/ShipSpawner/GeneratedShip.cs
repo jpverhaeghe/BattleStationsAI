@@ -23,6 +23,7 @@ public class GeneratedShip : MonoBehaviour
 
     // constants for this script
     public static int MAX_ENERGY_LEVEL = 6;             // the maximum level an energy system can reach
+    private const int TIME_TO_DESTROY_WALLS = 5;        // the time in seconds to destroy the walls
     private const float TILE_CENTER_OFFSET = 0.5f;
     private const int NUM_BOTS_PER_LIFE_SUPPORT = 4;
     private const int BOT_Y_OFFSET = 1;
@@ -618,13 +619,26 @@ public class GeneratedShip : MonoBehaviour
     } // end DestroyWall
 
     /// <summary>
-    /// Deletes the given wall from the scene
+    /// Deletes the given wall from the scene after it is fully dissolved
     /// </summary>
     /// <param name="wall">the wall game object to delete</param>
     /// <returns></returns>
     private IEnumerator DeleteWall(GameObject wall)
     {
-        yield return new WaitForSeconds(3);
+        float dissolveTime = 0;
+
+        while (dissolveTime < TIME_TO_DESTROY_WALLS) 
+        {
+            // get the time since the last pass
+            dissolveTime += Time.deltaTime;
+
+            float normalizedDissolve = Mathf.InverseLerp(0, TIME_TO_DESTROY_WALLS, dissolveTime);
+
+            // need to clamp the time we are dissolving between 0 and 1, 1 being fully dissolved
+            wall.GetComponentInChildren<Renderer>().material.SetFloat("_alphaClipThreshold", normalizedDissolve);
+            yield return null;
+        }
+
         Destroy(wall);
 
     } // end DeleteWall
