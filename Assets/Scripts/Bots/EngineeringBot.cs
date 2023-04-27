@@ -1,6 +1,7 @@
 using AlanZucconi.AI.PF;
 using System.Collections;
 using System.Collections.Generic;
+using System.Reflection;
 using UnityEngine;
 
 public class EngineeringBot : GenericBot
@@ -42,15 +43,6 @@ public class EngineeringBot : GenericBot
     } // end Start
 
     /// <summary>
-    /// Update is called once per frame - for now just calling the base class
-    /// </summary>
-    void Update()
-    {
-        base.Update();
-
-    } // end Update
-
-    /// <summary>
     /// Runs a generic idle state where it waits for a second before seting up a move state 
     /// (where the action choice takes place)
     /// </summary>
@@ -71,25 +63,61 @@ public class EngineeringBot : GenericBot
 
         // go through the modules to see if one is working and set the available module types
         RoomInfo moduleNeedingRepairs = null;
+        int moduleToRepairId = 0;
         int numBrokenModules = 0;
         int mostNumUsedMarkers = int.MaxValue;
 
-        foreach (RoomInfo module in myModules)
+        List<RoomInfo> potentialModules = new List<RoomInfo>();
+        List<int> moduleIds = new List<int>();
+        int moduleToMoveTo = currentModule;
+        int terminalToMoveTo = currentTerminal;
+
+        // find broken modules and put together a list of modules that can be acted upon
+        for (int moduleId = 0; moduleId < myModules.Count; moduleId++)
         {
-            if (module.IsBroken())
+            if (myModules[moduleId].IsBroken())
             {
                 brokenModule = true;
-                moduleNeedingRepairs = module;
+                moduleNeedingRepairs = myModules[moduleId];
+                moduleToRepairId = moduleId;
                 numBrokenModules++;
             }
             else
             {
-                if (module.GetNumUsedMarkers() < mostNumUsedMarkers)
+                // go through each terminal to find the one we can act and preference those that are less used
+                if (myModules[moduleId].GetNumUsedMarkers() < mostNumUsedMarkers)
                 {
-                    moduleToActOn = module;
-                    mostNumUsedMarkers = module.GetNumUsedMarkers();
+                    // put the lower used marker ones at the front of the list
+                    potentialModules.Insert(0, myModules[moduleId]);
+                    moduleIds.Insert(0, moduleId);
+                    mostNumUsedMarkers = myModules[moduleId].GetNumUsedMarkers();
+                }
+                else
+                {
+                    potentialModules.Add(myModules[moduleId]);
+                    moduleIds.Add(moduleId);
                 }
             }
+        }
+
+        // now go through all the potential modules (should be in best option wit used markers order) to see which one is not occupied
+        // or is the one we are currently working on
+        for (int listIndex = 0; listIndex < potentialModules.Count; listIndex++)
+        {
+            // only go through the modules that aren't full (except the one we are currently on) until one we can act on is found
+            if (!potentialModules[listIndex].IsFullyOccupied() || (moduleIds[listIndex] == currentModule))
+            {
+                moduleToActOn = myModules[moduleIds[listIndex]];
+                moduleToMoveTo = moduleIds[listIndex];
+                terminalToMoveTo = myModules[moduleIds[listIndex]].GetUnoccupiedTerminal();
+                break;
+            }
+        }
+
+        // no need to move if we are in the current module, so stay put for actions
+        if (moduleToMoveTo == currentModule)
+        {
+            terminalToMoveTo = currentTerminal;
         }
 
         AdjustShipPowerLevels();
@@ -99,11 +127,30 @@ public class EngineeringBot : GenericBot
         if ((numBrokenModules >= myModules.Count) || ((actionToTake == EngineerActions.WAIT) && brokenModule) )
         {
             moduleToActOn = moduleNeedingRepairs;
+            terminalToMoveTo = 0;
             actionToTake = EngineerActions.REPAIR;
         }
         else if (actionToTake == EngineerActions.WAIT)
         {
             moduleToActOn = null;
+        }
+
+        // if there is a module we are acting on, we need to set module and terminal as occupied and release the one we are on
+        if (moduleToActOn != null)
+        {
+            myModules[currentModule].SetTerminalOccupied(currentTerminal, false);
+
+            if (actionToTake == EngineerActions.REPAIR)
+            {
+                currentModule = moduleToRepairId;
+            }
+            else
+            {
+                currentModule = moduleToMoveTo;
+            }
+
+            currentTerminal = terminalToMoveTo;
+            myModules[currentModule].SetTerminalOccupied(currentTerminal, true);
         }
 
         // pause for a bit then move on (eventually will remove this when it is a turn based game)
@@ -175,7 +222,6 @@ public class EngineeringBot : GenericBot
         if (moduleToActOn != null)
         {
             // check to see what power levels need adjusting if any
-            // TODO: (may just randomly add power later if this is too slow)
             if (myShip.energyUpdateQueue.Count > 0)
             {
                 // first try to pump the engines as more energy is better

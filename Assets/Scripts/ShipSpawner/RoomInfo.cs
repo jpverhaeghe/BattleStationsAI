@@ -223,12 +223,13 @@ public class RoomInfo
     /// <summary>
     /// Sets the terminal specified as occupied - does nothing if the id was invalid
     /// <param name="terminalID">The terminal ID to set</param>
+    /// <param name="occupied">is the terminal going to be occupied or not</param>
     /// </summary>
-    public void SetTerminalOccupied(int terminalID)
+    public void SetTerminalOccupied(int terminalID, bool occupied)
     {
         if (terminalID < terminalLocations.Count)
         {
-            occupiedTerminals[terminalID] = true;
+            occupiedTerminals[terminalID] = occupied;
         }
 
     } // end SetTerminalOccupied

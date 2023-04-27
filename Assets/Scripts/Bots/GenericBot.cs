@@ -139,6 +139,17 @@ public class GenericBot : MonoBehaviour
     } // end SetShip
 
     /// <summary>
+    /// Using a Vector 2 to get the staring module information for this bot
+    /// </summary>
+    /// <param name="startModuleData">The module id in x and terminal id in y</param>
+    public void SetCurrentModuleData(Vector2Int startModuleData)
+    {
+        currentModule = startModuleData.x;
+        currentTerminal = startModuleData.y;
+
+    } // end SetCurrentModuleData
+
+    /// <summary>
     /// Adds the given module to the module list, creating it if it wasn't already set up
     /// </summary>
     /// <param name="newModule">The ship module to add</param>
@@ -420,7 +431,7 @@ public class GenericBot : MonoBehaviour
         bool newTerminalFound = false;
 
         // default to the current module and the next terminal in that module
-        int newModule = currentModule;
+        /*int newModule = currentModule;
         int newTerminal = (currentTerminal + 1);
 
         // go through the all the modules I have access to and see if one is available for me to wander to
@@ -455,10 +466,13 @@ public class GenericBot : MonoBehaviour
         }
 
         if (newTerminalFound) 
-        { 
+        {
+            // mark my current terminal as unoccupied
+            myModules[currentModule].SetTerminalOccupied(currentTerminal, false);
+            myModules[newModule].SetTerminalOccupied(newTerminal, true);
             currentModule = newModule;
             currentTerminal = newTerminal;
-        }
+        }*/
 
         return newTerminalFound;
 

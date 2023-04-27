@@ -426,7 +426,8 @@ public class GeneratedShip : MonoBehaviour
 
     private void InstantiateBot(int botType, RoomData.ModuleType[] moduleTypes)
     {
-        Vector2Int startGridPos = GetRoomStartGridLocation(moduleTypes);
+        Vector2Int[] startRoomData = GetRoomStartGridLocation(moduleTypes);
+        Vector2Int startGridPos = startRoomData[0];
 
         // calculate the gridPosition of the room based of the ship origin position (it's world position for its Grid 0,0)
         Vector3 startPos = new Vector3(shipWorldOrigin.x + startGridPos.y + TILE_CENTER_OFFSET, BOT_Y_OFFSET, 
@@ -435,6 +436,7 @@ public class GeneratedShip : MonoBehaviour
         GameObject bot = Instantiate(shipManagerScript.botPrefabs[botType], startPos, Quaternion.identity);
         GenericBot botScript = bot.GetComponent<GenericBot>();
         botScript.SetShip(this);
+        botScript.SetCurrentModuleData(startRoomData[1]);
 
         // get the rooms associated with this bot
         for (int i = 0; i < moduleTypes.Length; i++)
@@ -461,7 +463,7 @@ public class GeneratedShip : MonoBehaviour
     /// </summary>
     /// <param name="moduleTypes">The bots modules used by the bot</param>
     /// <returns>the Grid position for the module types given, defaults to center of life support module</returns>
-    private Vector2Int GetRoomStartGridLocation(RoomData.ModuleType[] moduleTypes)
+    private Vector2Int[] GetRoomStartGridLocation(RoomData.ModuleType[] moduleTypes)
     {
         // calculate the position for this bot (first room of the first module type) - defaulting to life support
         RoomInfo startRoom = FindRoomInShip(RoomData.ModuleType.LifeSupport);
@@ -493,6 +495,8 @@ public class GeneratedShip : MonoBehaviour
             }
         }
 
+        Vector2Int moduleData = new Vector2Int();
+
         if (startLocFound)
         {
             // The Room should not be fully occupied if we get here (unless we are in the default room)
@@ -502,12 +506,15 @@ public class GeneratedShip : MonoBehaviour
             if (terminalToUse >= 0)
             {
                 startGridPos = startRoom.GetTerminalLoacation(terminalToUse).mapLocation;
-                startRoom.SetTerminalOccupied(terminalToUse);
+                startRoom.SetTerminalOccupied(terminalToUse, true);
             }
+
+            moduleData.x = moduleIndex;
+            moduleData.y = terminalToUse;
         }
         // try going through operations modules?
 
-        return startGridPos;
+        return (new Vector2Int[] { startGridPos, moduleData});
 
     } // end GetRoomStartGridLocation
 

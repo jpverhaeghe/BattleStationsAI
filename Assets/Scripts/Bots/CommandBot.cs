@@ -38,15 +38,6 @@ public class CommandBot : GenericBot
     } // end Start
 
     /// <summary>
-    /// Update is called once per frame - for now just calling the base class
-    /// </summary>
-    void Update()
-    {
-        base.Update();
-
-    } // end Update
-
-    /// <summary>
     /// Runs a generic idle state where it waits for a second before seting up a move state 
     /// (where the action choice takes place)
     /// </summary>
@@ -71,7 +62,6 @@ public class CommandBot : GenericBot
         // go through the modules to see if one is working and set the available module types
         RoomInfo moduleNeedingRepairs = null;
         int numBrokenModules = 0;
-        int mostNumUsedMarkers = int.MaxValue;
 
         foreach (RoomInfo module in myModules)
         {
@@ -83,10 +73,12 @@ public class CommandBot : GenericBot
             }
             else
             {
-                if (module.GetNumUsedMarkers() < mostNumUsedMarkers)
+                // there is only one command module at the moment, so have the command bot move terminals if it can
+                currentTerminal = module.GetUnoccupiedTerminal();
+
+                if (currentTerminal >= 0)
                 {
                     moduleToActOn = module;
-                    mostNumUsedMarkers = module.GetNumUsedMarkers();
                 }
             }
         }
@@ -113,6 +105,7 @@ public class CommandBot : GenericBot
         if ((numBrokenModules >= myModules.Count) || (!isManeurving && brokenModule))
         {
             moduleToActOn = moduleNeedingRepairs;
+            currentTerminal = 0;
             actionToTake = CommandActions.REPAIR;
         }
         else if (actionToTake == CommandActions.WAIT)

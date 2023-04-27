@@ -5,12 +5,12 @@ using UnityEngine;
 public class CameraMovement : MonoBehaviour
 {
     // constant values used by this script
-    private const float ZOOM_LEFT_CLAMP = -20;
-    private const float ZOOM_RIGHT_CLAMP = 60;
+    private const float ZOOM_LEFT_CLAMP = (38 - 100);
+    private const float ZOOM_RIGHT_CLAMP = (100 - 38);
     private const float ZOOM_IN_CLAMP = 30;
     private const float ZOOM_OUT_CLAMP = 90;
-    private const float ZOOM_DOWN_CLAMP = -50;
-    private const float ZOOM_UP_CLAMP = 10;
+    private const float ZOOM_DOWN_CLAMP = (12 - 70);
+    private const float ZOOM_UP_CLAMP = (70 - 12);
     private const float BOT_Y_OFFSET = 20;
 
     // private variable used only by this script
