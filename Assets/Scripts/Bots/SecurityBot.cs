@@ -18,8 +18,8 @@ public class SecurityBot : GenericBot
     // constant variables for this bot
     public const int SPEED_MULTIPLIER = 2;                          // the speed multiplier of the other ship
     public const int CANNON_FIRING_ARC = 180;                       // the area the cannon can hit from its facing (may not use)
-    public const int MIN_POWER_LEVEL_TO_FIRE = 2;                   // the minimum power level we will need to fire a weapon
-    public const int MAX_POWER_LEVEL_TO_REQUEST = 4;                // the maximum power level - don't request more when it is here
+    //public const int MIN_POWER_LEVEL_TO_FIRE = 2;                   // the minimum power level we will need to fire a weapon - moved to data slider for user input
+    //public const int MAX_POWER_LEVEL_TO_REQUEST = 4;                // the maximum power level - don't request more when it is here - moved to data slider for user input
     public const int MISSILE_BASE_DIFFICULTY = 11;                  // the minimum difficulty for firing a missile
 
     public const float CANNON_PREFERENCE = 0.70f;
@@ -135,7 +135,7 @@ public class SecurityBot : GenericBot
         }
 
         // only go to fire a weapon if there is energy
-        if ((myShip.currentTarget != null) && (currentShipWeaponsLevel >= MIN_POWER_LEVEL_TO_FIRE))
+        if ((myShip.currentTarget != null) && (currentShipWeaponsLevel >= gameManagerScript.securityMinPowerFire.value))
         {
             // now go through all the potential cannon modules (should be in best option with used markers order) to see which one is not occupied
             // or is the one we are currently working on
@@ -182,7 +182,7 @@ public class SecurityBot : GenericBot
 
         // else request energy if we are not firing and are not at our best power for weapons
         // (Cannon hullDamage is more effective with more power)
-        if (!isFiring && (currentShipWeaponsLevel < MAX_POWER_LEVEL_TO_REQUEST) &&
+        if (!isFiring && (currentShipWeaponsLevel < gameManagerScript.securityMinPowerLevel.value) &&
             (currentShipWeaponsLevel < GeneratedShip.MAX_ENERGY_LEVEL))
         {
             actionToTake = SecurityActions.REQUEST_WEAPON_POWER;
@@ -392,7 +392,7 @@ public class SecurityBot : GenericBot
             actionDifficulty -= combat;
 
             // only fire if there is a chance to succeed within our tolerance
-            if (actionDifficulty < MAX_DIFFICULTY_TO_TEST)
+            if (actionDifficulty < gameManagerScript.botDifficultyCheckSlider.value)
             {
                 int moduleToMoveTo;
                 int terminalToMoveTo;

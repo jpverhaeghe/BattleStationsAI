@@ -8,7 +8,6 @@ using static RoomData;
 
 public class ShipManager : MonoBehaviour
 {
-    public static int ENEMY_SHIP_MAX_HULL_DAMAGE = 100;
     public static int COLLISION_DAMAGE = 5;
     public static int MAX_HEX_RANGE = 50;
     public const int BUFFER_BETWEEN_SHIPS = 10;

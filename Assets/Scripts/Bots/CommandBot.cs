@@ -15,9 +15,9 @@ public class CommandBot : GenericBot
         WAIT
     }
 
-    // constant variables for this bot
+    // constant variables for this bot - moved to data slider for user input
     private const int MIN_DIST_TO_ADD_SPEED = 6;                    // the distance where we add speed or start braking...
-    private const int MAX_POWER_LEVEL_TO_REQUEST = 4;               // the maximum power level - don't request more when it is here
+    //private const int MAX_POWER_LEVEL_TO_REQUEST = 4;               // the maximum power level - don't request more when it is here
 
     // private variables
     private CommandActions actionToTake;
@@ -91,7 +91,7 @@ public class CommandBot : GenericBot
 
         // else request energy if we are not firing and are not at our best power for weapons
         // (Cannon hullDamage is more effective with more power)
-        if (!isManeurving && (currentShipHelmLevel < MAX_POWER_LEVEL_TO_REQUEST) &&
+        if (!isManeurving && (currentShipHelmLevel < gameManagerScript.commandMinPowerLevel.value) &&
             (currentShipHelmLevel < GeneratedShip.MAX_ENERGY_LEVEL))
         {
             actionToTake = CommandActions.REQUEST_HELM_POWER;
@@ -205,6 +205,14 @@ public class CommandBot : GenericBot
             facingTarget = true;
         }
 
+        int minDistToAddSpeed = 0;
+        bool success = int.TryParse(gameManagerScript.commandShipDistance.text, out minDistToAddSpeed);
+
+        if (!success)
+        {
+            minDistToAddSpeed = MIN_DIST_TO_ADD_SPEED;
+        }
+
         if (!facingTarget)
         {
             isManeuvering = true;
@@ -212,9 +220,9 @@ public class CommandBot : GenericBot
             adjustmentLevel = SINGLE_DIRECTION_CHANGE;
         }
         // first off, check the distance from the other ship. We can't shoot it effectively if we aren't close enough
-        else if (distanceToTarget != MIN_DIST_TO_ADD_SPEED)
+        else if (distanceToTarget != minDistToAddSpeed)
         {
-            if ((distanceToTarget > MIN_DIST_TO_ADD_SPEED) &&
+            if ((distanceToTarget > minDistToAddSpeed) &&
                     (myShip.currentSpeed < MAX_SPEED))
             {
                 isManeuvering = true;
@@ -222,7 +230,7 @@ public class CommandBot : GenericBot
                 adjustmentLevel = 1;
             }
 
-            if ((distanceToTarget < MIN_DIST_TO_ADD_SPEED) &&
+            if ((distanceToTarget < minDistToAddSpeed) &&
                     (myShip.currentSpeed > 0))
             {
                 isManeuvering = true;

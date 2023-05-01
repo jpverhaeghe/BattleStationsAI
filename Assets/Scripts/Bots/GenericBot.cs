@@ -37,7 +37,7 @@ public class GenericBot : MonoBehaviour
     public static int PROFESSION_SKILL_VALUE = 3;                   // starting value for the profession the bot is trained in
     public static int NON_PROFESSION_SKILL_VALUE = 1;               // starting value for all other professions (untrained)
     public static int ADD_OR_USED_MULTIPLIER = 3;                   // the difficulty multiplier for each used marker on a module
-    public static int MAX_DIFFICULTY_TO_TEST = 9;                   // the largest difficulty a bot will test against
+    //public static int MAX_DIFFICULTY_TO_TEST = 9;                   // the largest difficulty a bot will test against - moved to data slider for user input
     public static int MIN_VALUE_TO_ADD_EXTRA = 6;                   // the minimum level to try for moving/pumping more than 1 level
     public static int MAX_SPEED = 5;                                // the maximum safe speed for the ship
     public static int SINGLE_DIRECTION_CHANGE = 90;//60;            // each change in direction adds difficulty, one change is 90 degrees (hex would be 60)
@@ -71,6 +71,8 @@ public class GenericBot : MonoBehaviour
     protected RoomInfo moduleToActOn;
     protected int actionDifficulty;
 
+    // private variables used by this script
+    protected GameManager gameManagerScript;
 
     /// <summary>
     /// Start is called before the first frame update
@@ -84,6 +86,9 @@ public class GenericBot : MonoBehaviour
         piloting = NON_PROFESSION_SKILL_VALUE;
         science = NON_PROFESSION_SKILL_VALUE;
         myType = BotType.OPERATIONS;
+
+        // get access to the game manager script
+        gameManagerScript = GameObject.Find("GameManager").GetComponent<GameManager>();
 
     } // end Start
 

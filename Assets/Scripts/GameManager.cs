@@ -2,6 +2,7 @@ using System.Collections;
 using System.Collections.Generic;
 using TMPro;
 using UnityEngine;
+using UnityEngine.UI;
 
 public class GameManager : MonoBehaviour
 {
@@ -21,6 +22,16 @@ public class GameManager : MonoBehaviour
     [SerializeField] ShipManager shipManager;
     [SerializeField] TMP_Dropdown heroShipSizes;
     [SerializeField] TMP_Dropdown enemyShipSizes;
+
+    [Header("Elements that affect bots decisions")]
+    [SerializeField] TMP_Text sliderHandleText;
+    [SerializeField] public Slider botDifficultyCheckSlider;
+    [SerializeField] public TMP_InputField commandShipDistance;
+    [SerializeField] public TMP_Dropdown commandMinPowerLevel;
+    [SerializeField] public TMP_Dropdown engineerMinPowerTransfer;
+    [SerializeField] public TMP_Dropdown scienceMinPowerLevel;
+    [SerializeField] public TMP_Dropdown securityMinPowerFire;
+    [SerializeField] public TMP_Dropdown securityMinPowerLevel;
 
     [Header("HUD Elements to show/hide based on phase")]
     [SerializeField] GameObject simulationSelectionUI;
@@ -126,6 +137,15 @@ public class GameManager : MonoBehaviour
         simulationRunning = false;
 
     } // end EndSimulation
+
+    /// <summary>
+    /// Updates the slider handle text with the new value
+    /// </summary>
+    public void UpdateSliderValue()
+    {
+        sliderHandleText.text = botDifficultyCheckSlider.value.ToString();
+
+    } // end UpdateSliderValue
 
     private void DoPhases()
     {

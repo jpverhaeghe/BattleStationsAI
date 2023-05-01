@@ -13,9 +13,9 @@ public class ScienceBot : GenericBot
         REPAIR,
         WAIT
     }
-    // constant variables for this bot
-    private const int MIN_POWER_LEVEL_TO_REQUEST = 2;               // the minimum power level - request more when it is below here
-    private const int MAX_POWER_LEVEL_TO_REQUEST = 4;               // the maximum power level - don't request more when it is above here
+
+    // constant variables for this bot - moved to data slider for user input
+    //private const int MAX_POWER_LEVEL_TO_REQUEST = 4;               // the maximum power level - don't request more when it is above here
 
     // private variables
     private ScienceActions actionToTake;
@@ -142,7 +142,7 @@ public class ScienceBot : GenericBot
 
             // else request energy if we are not firing and are not at our best power for weapons
             // (Cannon hullDamage is more effective with more power)
-            if (!isScanning && (currentShipShieldsLevel < MAX_POWER_LEVEL_TO_REQUEST) &&
+            if (!isScanning && (currentShipShieldsLevel < gameManagerScript.scienceMinPowerLevel.value) &&
                 (currentShipShieldsLevel < GeneratedShip.MAX_ENERGY_LEVEL))
             {
                 actionToTake = ScienceActions.REQUEST_SHIELD_POWER;
@@ -277,7 +277,7 @@ public class ScienceBot : GenericBot
                 adjustmentLevel++;
             }
 
-            if (actionDifficulty <= MAX_DIFFICULTY_TO_TEST)
+            if (actionDifficulty <= gameManagerScript.botDifficultyCheckSlider.value)
             {
                 actionToTake = ScienceActions.SCAN;
                 isScanning = true;

@@ -16,7 +16,7 @@ public class EngineeringBot : GenericBot
 
     // constant variables for this bot
     public const int ENGINE_CHANGE_BASE_DIFFICULTY = 8;         // the minimum difficulty for pumping an engine
-    public const int MIN_POWER_LEVELS_TO_TRANSFER = 5;          // the minimum total power before performing a transfer
+    //public const int MIN_POWER_LEVELS_TO_TRANSFER = 5;          // the minimum total power before performing a transfer - moved to data slider for user input
 
     // switched to a queue system...so not using this heuristic
     //private static float HELM_POWER_PREFERENCE = 0.2f;
@@ -239,7 +239,7 @@ public class EngineeringBot : GenericBot
                 }
 
                 // if the difficulty is too difficult, perhaps transferring instead if available as it ignores used markers
-                if (actionDifficulty > MAX_DIFFICULTY_TO_TEST)
+                if (actionDifficulty > gameManagerScript.botDifficultyCheckSlider.value)
                 {
                     // only transfer if the combined energy levels are high enough
                     int currentEnergyTotal = 0;
@@ -249,7 +249,7 @@ public class EngineeringBot : GenericBot
                         currentEnergyTotal += myShip.energySystemLevels[energyType];
                     }
 
-                    if (currentEnergyTotal >= MIN_POWER_LEVELS_TO_TRANSFER)
+                    if (currentEnergyTotal >= gameManagerScript.engineerMinPowerTransfer.value)
                     {
                         actionDifficulty = ENGINE_CHANGE_BASE_DIFFICULTY;
                         actionDifficulty -= engineering;
@@ -260,7 +260,7 @@ public class EngineeringBot : GenericBot
                             adjustmentLevel++;
                         }*/
 
-                        if (actionDifficulty <= MAX_DIFFICULTY_TO_TEST)
+                        if (actionDifficulty <= gameManagerScript.botDifficultyCheckSlider.value)
                         {
                             actionToTake = EngineerActions.TRANSFER_POWER;
                         }
