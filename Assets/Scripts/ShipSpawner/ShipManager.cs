@@ -4,6 +4,7 @@ using System.Collections;
 using System.Collections.Generic;
 using TMPro;
 using UnityEngine;
+using UnityEngine.XR;
 using static RoomData;
 
 public class ShipManager : MonoBehaviour
@@ -162,7 +163,10 @@ public class ShipManager : MonoBehaviour
             // stop al messages and post a message
             botRollText.text = shipObjects[shipDestroyed].name + " was destroyed. Simulation ending!";
             botChatterChoice.value = 0;
-            
+
+            // play a ship explosion sound
+            PlayAudioClip(4);
+
             // Destroy the ship object that was destryoed
             ClearShip(shipDestroyed);
         }
@@ -646,11 +650,11 @@ public class ShipManager : MonoBehaviour
     /// Plays the audio clip for the given id
     /// </summary>
     /// <param name="clipToPlay"></param>
-    public void playAudioClip(int clipToPlay)
+    public void PlayAudioClip(int clipToPlay)
     {
         gameObject.GetComponent<AudioSource>().PlayOneShot(battleSounds[clipToPlay]);
 
-    } // end playAudioClip
+    } // end PlayAudioClip
 
     public int GetDistanceBetweenShips(Vector2Int shipA, Vector2Int shipB)
     {

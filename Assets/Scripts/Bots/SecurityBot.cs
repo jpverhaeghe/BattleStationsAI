@@ -253,7 +253,12 @@ public class SecurityBot : GenericBot
                     //Debug.Log("Cannon fired with success and did " + damage + " damage!");
 
                     // play a cannon hit sound
-                    myShip.shipManagerScript.playAudioClip(0);
+                    myShip.shipManagerScript.PlayAudioClip(1);
+                }
+                else
+                {
+                    // play a cannon miss sound
+                    myShip.shipManagerScript.PlayAudioClip(0);
                 }
 
                 // used marker is added on success or failure
@@ -277,7 +282,7 @@ public class SecurityBot : GenericBot
                     //Debug.Log("Missile fired with success and did " + hullDamage + " damage!");
 
                     // play a missile hit sound
-                    myShip.shipManagerScript.playAudioClip(1);
+                    myShip.shipManagerScript.PlayAudioClip(2);
                 }
                 // if a missile firing fails, then it does damage to our ship!
                 else
@@ -288,7 +293,7 @@ public class SecurityBot : GenericBot
                     //Debug.Log("!!!Missile faild to fire, it exploded and did " + hullDamage + " damage to your ship!!!");
 
                     // play a missile explosion sound
-                    myShip.shipManagerScript.playAudioClip(2);
+                    myShip.shipManagerScript.PlayAudioClip(3);
                 }
 
                 // used marker is added on success or failure
